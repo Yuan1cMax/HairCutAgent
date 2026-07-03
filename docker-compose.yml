@@ -1,0 +1,9 @@
+services:
+  haircut-api:
+    build: .
+    container_name: haircut-api
+    ports:
+      - "8003:8003"
+    volumes:
+      - ./barber.db:/app/barber.db
+    restart: unless-stopped

@@ -17,6 +17,9 @@ barber.db
 *.bak-*
 fix_dispatch.py
 
+# Private local workflow export
+haircutagent-dify-workflow.yml
+
 # OS/editor
 .DS_Store
 Thumbs.db

@@ -1,0 +1,14 @@
+.git
+__pycache__/
+*.pyc
+*.pyo
+*.log
+nohup.out
+*.bak
+*.bak-*
+fix_dispatch.py
+barber.db
+*.sqlite
+*.sqlite3
+.env
+.env.*

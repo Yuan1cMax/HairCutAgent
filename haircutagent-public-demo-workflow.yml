@@ -1,0 +1,107 @@
+app:
+  description: Public portfolio version with sanitized prompts and deployment details.
+  icon: "🤖"
+  icon_background: "#FFEAD5"
+  icon_type: emoji
+  mode: advanced-chat
+  name: HairCutAgent Public Demo Workflow
+  use_icon_as_answer_icon: false
+kind: app
+version: 0.6.0
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  features:
+    opening_statement: 您好，我是理发店预约助手，可以协助预约、查询、改期、取消和价格咨询。
+    retriever_resource:
+      enabled: true
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions:
+      - 我想预约明天下午剪发
+      - 洗剪吹多少钱？
+      - 帮我查询一下已有预约
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+      language: ''
+      voice: ''
+  graph:
+    description: |
+      Public demo summary:
+      1. Query rewriting and intent classification
+      2. Booking parameter extraction and required-field validation
+      3. HTTP dispatch to FastAPI backend
+      4. Price query branch reading backend service data
+      5. Knowledge retrieval branch for hairstyle recommendation
+      6. Reply generation with business-state aware fallback
+    nodes:
+      - id: start
+        data:
+          title: 开始
+          type: start
+      - id: intent_classifier
+        data:
+          title: 意图分类器
+          type: llm
+          desc: 使用轻量模型将用户请求分流到预约、价格、推荐、门店、兜底等分支。
+      - id: booking_params
+        data:
+          title: 预约参数提取
+          type: llm
+          desc: 从用户输入中提取预约动作、时间、服务、门店、联系方式等结构化字段。
+      - id: booking_validator
+        data:
+          title: 必填字段校验
+          type: code
+          desc: 校验创建、改期、取消、查询等动作所需字段是否齐全。
+      - id: booking_dispatch
+        data:
+          title: 后端业务调用
+          type: http-request
+          url: http://<internal-backend-host>:8003/dispatch
+          authorization:
+            type: no-auth
+          desc: 调用 FastAPI 统一业务入口处理预约相关操作。
+      - id: price_dispatch
+        data:
+          title: 服务价格查询
+          type: http-request
+          url: http://<internal-backend-host>:8003/admin/services
+          authorization:
+            type: no-auth
+          desc: 读取服务项目和价格，用于价格分支回答。
+      - id: retriever
+        data:
+          title: 发型知识检索
+          type: knowledge-retrieval
+          desc: 从知识库召回发型建议相关资料。
+      - id: answer_generator
+        data:
+          title: 结果回复生成
+          type: llm
+          desc: 结合后端结果或知识检索结果生成最终答复。
+      - id: answer
+        data:
+          title: 输出
+          type: answer
+    edges:
+      - source: start
+        target: intent_classifier
+      - source: intent_classifier
+        target: booking_params
+      - source: booking_params
+        target: booking_validator
+      - source: booking_validator
+        target: booking_dispatch
+      - source: booking_dispatch
+        target: answer_generator
+      - source: price_dispatch
+        target: answer_generator
+      - source: retriever
+        target: answer_generator
+      - source: answer_generator
+        target: answer
