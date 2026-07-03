@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HairCutAgent · 理发店智能预约助手</title>
+<style>
+  /* ── Reset & Variables ── */
+  *,*::before,*::after{box-sizing:border-box}
+  :root{
+    --bg:#f7f9fc;
+    --surface:#ffffff;
+    --surface-strong:#ffffff;
+    --ink:#172033;
+    --muted:#697386;
+    --line:rgba(119,134,160,.18);
+    --green:#0f8f80;
+    --green-dark:#0b5f72;
+    --blue:#3b82f6;
+    --violet:#8b5cf6;
+    --coral:#f9737a;
+    --gold:#c58b38;
+    --shadow:0 24px 70px rgba(31,48,76,.13);
+    --shadow-lg:0 40px 100px rgba(31,48,76,.18);
+    --radius:18px;
+    --max:1120px;
+    --nav-h:68px;
+    --scroll-pct:0;
+    --hue:0;
+    --blob-move:1;
+  }
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    background:linear-gradient(170deg,#fbfdff 0%,#f4f7fb 42%,#eef3f8 100%);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    position:relative;
+    overflow-x:hidden;
+  }
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:var(--max);margin:0 auto;padding:0 24px}
+
+  /* ── Scroll Progress Bar ── */
+  #scroll-progress{
+    position:fixed;top:0;left:0;height:2px;z-index:999;
+    background:linear-gradient(90deg,var(--green),var(--blue),var(--violet));
+    width:0%;
+    transition:width 60ms linear;
+    will-change:width;
+  }
+
+  /* ── Background Stage ── */
+  .bg-stage{
+    position:fixed;
+    inset:0;
+    overflow:hidden;
+    pointer-events:none;
+    z-index:0;
+  }
+  .bg-blob{
+    position:absolute;
+    border-radius:50%;
+    filter:blur(52px);
+    transform:translate3d(0,0,0);
+    will-change:transform, opacity;
+    transition:background .8s ease;
+  }
+  .bg-blob.b1{
+    width:42vw;height:42vw;min-width:420px;min-height:420px;left:-10vw;top:-8vh;
+    background:radial-gradient(circle,rgba(59,130,246,.52),rgba(59,130,246,.22) 42%,rgba(59,130,246,0) 72%);
+  }
+  .bg-blob.b2{
+    width:40vw;height:40vw;min-width:400px;min-height:400px;right:-10vw;top:10vh;
+    background:radial-gradient(circle,rgba(15,143,128,.50),rgba(15,143,128,.20) 40%,rgba(15,143,128,0) 70%);
+  }
+  .bg-blob.b3{
+    width:46vw;height:46vw;min-width:460px;min-height:460px;left:18vw;top:48vh;
+    background:radial-gradient(circle,rgba(139,92,246,.38),rgba(249,115,122,.20) 42%,rgba(249,115,122,0) 72%);
+  }
+  .bg-blob.b4{
+    width:30vw;height:30vw;min-width:300px;min-height:300px;right:30vw;bottom:-10vh;
+    background:radial-gradient(circle,rgba(15,143,128,.30),rgba(59,130,246,.15) 42%,rgba(15,143,128,0) 68%);
+    opacity:0;
+    transition:opacity 1s ease;
+  }
+  .bg-grid{
+    position:absolute;inset:-10%;
+    background-image:
+      linear-gradient(rgba(255,255,255,.45) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(255,255,255,.45) 1px,transparent 1px);
+    background-size:88px 88px;
+    mask-image:linear-gradient(180deg,transparent 0%,rgba(0,0,0,.25) 18%,rgba(0,0,0,.4) 50%,transparent 100%);
+    opacity:.18;transition:opacity .6s ease;
+  }
+  body.scrolled .bg-grid{opacity:.08}
+  body.scrolled .bg-blob.b4{opacity:.7}
+
+  /* ── Layer content over bg ── */
+  nav,main,footer{position:relative;z-index:1}
+
+  /* ── Navbar ── */
+  nav{
+    position:sticky;top:0;z-index:20;
+    height:var(--nav-h);
+    background:rgba(247,249,252,.68);
+    backdrop-filter:blur(22px) saturate(150%);
+    -webkit-backdrop-filter:blur(22px) saturate(150%);
+    border-bottom:1px solid rgba(119,134,160,.12);
+    transition:height .5s cubic-bezier(.22,1,.36,1),
+               background .5s cubic-bezier(.22,1,.36,1),
+               box-shadow .5s cubic-bezier(.22,1,.36,1);
+    will-change:height,background;
+  }
+  nav.nav-compact{
+    height:56px;
+    background:rgba(247,249,252,.88);
+    box-shadow:0 1px 0 rgba(119,134,160,.08),0 4px 20px rgba(31,48,76,.06);
+  }
+  .nav-inner{
+    height:100%;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:18px;
+    transition:gap .5s ease;
+  }
+  .brand{
+    display:flex;align-items:center;gap:11px;
+    font-weight:800;letter-spacing:.2px;
+    font-size:clamp(15px,1.2vw,17px);
+  }
+  .mark{
+    width:28px;height:28px;border-radius:10px;
+    background:linear-gradient(135deg,var(--green),var(--blue) 58%,var(--violet));
+    display:grid;place-items:center;color:#fff;font-size:15px;
+    box-shadow:0 10px 24px rgba(15,143,128,.22);
+    transition:transform .4s ease,box-shadow .4s ease;
+  }
+  .brand:hover .mark{
+    transform:scale(1.08) rotate(-4deg);
+    box-shadow:0 12px 30px rgba(15,143,128,.30);
+  }
+  .nav-links{display:flex;align-items:center;gap:22px;font-size:14px;color:var(--muted)}
+  .nav-links a{text-decoration:none;position:relative;transition:color .3s ease}
+  .nav-links a::after{
+    content:'';position:absolute;left:0;bottom:-3px;
+    width:0;height:1.5px;
+    background:linear-gradient(90deg,var(--green),var(--blue));
+    transition:width .35s cubic-bezier(.22,1,.36,1);
+    border-radius:2px;
+  }
+  .nav-links a:hover{color:var(--ink)}
+  .nav-links a:hover::after{width:100%}
+  .nav-cta{
+    border:1px solid rgba(15,143,128,.36);
+    padding:8px 15px;border-radius:999px;
+    color:var(--green-dark)!important;font-weight:700;
+    background:rgba(255,255,255,.55);
+    transition:background .3s ease,transform .3s ease,box-shadow .3s ease;
+  }
+  .nav-cta:hover{
+    background:rgba(15,143,128,.08)!important;
+    transform:translateY(-1px);
+    box-shadow:0 6px 20px rgba(15,143,128,.18);
+  }
+  .mono{font-family:"SFMono-Regular","Cascadia Code","JetBrains Mono",monospace}
+
+  /* ── Hero ── */
+  .hero{
+    padding:92px 0 70px;
+    position:relative;overflow:hidden;
+  }
+  .hero::after{
+    content:"";
+    position:absolute;
+    width:640px;height:640px;
+    right:-220px;top:-180px;
+    background:linear-gradient(135deg,rgba(59,130,246,.22),rgba(139,92,246,.16),rgba(15,143,128,.18));
+    filter:blur(42px);
+    transform:rotate(-12deg);
+    z-index:-1;
+    transition:transform .2s ease;
+  }
+  .hero-grid{display:grid;grid-template-columns:1.02fr .98fr;gap:42px;align-items:center}
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;
+    border:1px solid rgba(59,130,246,.18);
+    background:rgba(255,255,255,.62);
+    color:var(--green-dark);border-radius:999px;
+    padding:7px 13px;font-size:13px;font-weight:700;
+    margin-bottom:22px;
+    box-shadow:0 10px 30px rgba(31,48,76,.06);
+  }
+  h1{
+    font-size:clamp(42px,6.6vw,76px);
+    line-height:1.02;margin:0 0 22px;
+    letter-spacing:-.035em;
+    background:linear-gradient(100deg,#172033 0%,#0b5f72 46%,#3b82f6 76%,#8b5cf6 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .hero-copy{font-size:19px;line-height:1.75;color:var(--muted);max-width:640px;margin:0 0 30px}
+  .cta-row{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-bottom:34px}
+  .btn{
+    display:inline-flex;align-items:center;gap:9px;text-decoration:none;
+    border-radius:999px;padding:14px 22px;font-weight:800;font-size:15px;
+    transition:transform .4s cubic-bezier(.22,1,.36,1),
+               box-shadow .4s cubic-bezier(.22,1,.36,1),
+               background .4s ease;
+    cursor:default;
+  }
+  .btn:hover{transform:translateY(-3px) scale(1.02)}
+  .btn-primary{
+    background:linear-gradient(135deg,var(--green),var(--blue));
+    color:white;
+    box-shadow:0 16px 36px rgba(59,130,246,.22);
+  }
+  .btn-primary:hover{
+    background:linear-gradient(135deg,var(--green-dark),var(--blue));
+    box-shadow:0 22px 44px rgba(59,130,246,.28);
+  }
+  .btn-secondary{
+    background:rgba(255,255,255,.76);
+    border:1px solid var(--line);color:var(--ink);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+  }
+  .btn-secondary:hover{
+    background:rgba(255,255,255,.92);
+    border-color:rgba(119,134,160,.28);
+    box-shadow:0 8px 28px rgba(31,48,76,.08);
+  }
+  .btn[aria-disabled="true"],.nav-cta[aria-disabled="true"]{
+    opacity:.72;cursor:not-allowed;box-shadow:none;transform:none!important;
+  }
+  .meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;max-width:560px}
+  .meta-card{
+    background:rgba(255,255,255,.62);
+    border:1px solid var(--line);
+    border-radius:15px;padding:15px 16px;
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    transition:transform .4s ease,box-shadow .4s ease;
+  }
+  .meta-card:hover{
+    transform:translateY(-2px);
+    box-shadow:0 12px 32px rgba(31,48,76,.08);
+  }
+  .meta-card strong{display:block;font-size:22px;color:var(--green-dark)}
+  .meta-card span{display:block;font-size:12px;color:var(--muted);margin-top:4px}
+  .demo-panel{
+    background:rgba(255,255,255,.72);
+    border:1px solid rgba(255,255,255,.72);
+    border-radius:28px;
+    box-shadow:var(--shadow);
+    padding:18px;
+    backdrop-filter:blur(18px);
+    -webkit-backdrop-filter:blur(18px);
+    animation:float 6s ease-in-out infinite;
+    transition:box-shadow .5s ease;
+  }
+  .demo-panel:hover{
+    box-shadow:0 30px 80px rgba(31,48,76,.16);
+  }
+  @keyframes float{
+    0%,100%{transform:translateY(0)}
+    50%{transform:translateY(-8px)}
+  }
+  .phone{border-radius:22px;background:linear-gradient(180deg,#ffffff,#f7fbff);border:1px solid var(--line);overflow:hidden}
+  .phone-head{display:flex;align-items:center;justify-content:space-between;padding:15px 16px;border-bottom:1px solid var(--line)}
+  .dots{display:flex;gap:6px}.dots i{width:8px;height:8px;border-radius:50%}
+  .dots i:nth-child(1){background:#d96c57}.dots i:nth-child(2){background:#dfb45d}.dots i:nth-child(3){background:#6aae84}
+  .chat{padding:20px;display:grid;gap:14px}
+  .bubble{max-width:88%;padding:13px 15px;border-radius:16px;font-size:14px;line-height:1.55}
+  .bot{background:white;border:1px solid var(--line)}
+  .user{background:linear-gradient(135deg,var(--green),var(--blue));color:white;justify-self:end}
+  .status{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:8px}
+  .status div{border:1px solid var(--line);background:white;border-radius:14px;padding:12px}
+  .status b{display:block;color:var(--green-dark);font-size:13px}.status span{display:block;color:var(--muted);font-size:12px;margin-top:3px}
+
+  /* ── Reveal Animations (bidirectional — enter slow, exit quick) ── */
+  .reveal{
+    opacity:0;
+    transform:translateY(36px);
+    /* base transition used when EXITING (class removed) */
+    transition:opacity .45s cubic-bezier(.4,0,.2,1),
+               transform .45s cubic-bezier(.4,0,.2,1);
+    will-change:opacity,transform;
+  }
+  .reveal.visible{
+    opacity:1;
+    transform:translateY(0);
+    /* visible-state transition used when ENTERING (class added) */
+    transition:opacity .85s cubic-bezier(.22,1,.36,1),
+               transform .85s cubic-bezier(.22,1,.36,1);
+  }
+  .reveal-scale{
+    opacity:0;
+    transform:scale(.96);
+    transition:opacity .4s cubic-bezier(.4,0,.2,1),
+               transform .4s cubic-bezier(.4,0,.2,1);
+    will-change:opacity,transform;
+  }
+  .reveal-scale.visible{
+    opacity:1;
+    transform:scale(1);
+    transition:opacity .75s cubic-bezier(.22,1,.36,1),
+               transform .75s cubic-bezier(.22,1,.36,1);
+  }
+  .reveal-stagger > *{
+    opacity:0;
+    transform:translateY(28px);
+    transition:opacity .35s cubic-bezier(.4,0,.2,1),
+               transform .35s cubic-bezier(.4,0,.2,1);
+    will-change:opacity,transform;
+  }
+  .reveal-stagger.visible > *{
+    opacity:1;
+    transform:translateY(0);
+    transition:opacity .65s cubic-bezier(.22,1,.36,1),
+               transform .65s cubic-bezier(.22,1,.36,1);
+  }
+  /* stagger delays */
+  .reveal-stagger.visible > *:nth-child(1){transition-delay:0ms}
+  .reveal-stagger.visible > *:nth-child(2){transition-delay:80ms}
+  .reveal-stagger.visible > *:nth-child(3){transition-delay:160ms}
+  .reveal-stagger.visible > *:nth-child(4){transition-delay:240ms}
+  .reveal-stagger.visible > *:nth-child(5){transition-delay:320ms}
+  .reveal-stagger.visible > *:nth-child(6){transition-delay:400ms}
+  .reveal-stagger.visible > *:nth-child(7){transition-delay:480ms}
+  .reveal-stagger.visible > *:nth-child(8){transition-delay:560ms}
+
+  /* ── Sections ── */
+  section{
+    padding:74px 0;
+    position:relative;
+    transition:background .8s ease;
+  }
+  section::before{
+    content:"";
+    position:absolute;
+    left:50%;
+    top:-8%;
+    width:min(76vw,920px);
+    height:280px;
+    transform:translateX(-50%);
+    background:radial-gradient(circle,rgba(255,255,255,.34),rgba(59,130,246,.06) 42%,rgba(15,143,128,0) 74%);
+    filter:blur(22px);
+    opacity:.55;
+    pointer-events:none;
+    z-index:-1;
+    transition:opacity .8s ease,background .8s ease;
+  }
+  .section-head{max-width:720px;margin-bottom:30px}
+  .section-kicker{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);font-weight:900;margin-bottom:10px}
+  h2{
+    font-size:clamp(30px,4vw,44px);
+    line-height:1.15;margin:0 0 14px;
+    letter-spacing:-.02em;
+    background:linear-gradient(135deg,var(--ink),var(--green-dark) 60%,var(--blue));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .section-head p{color:var(--muted);font-size:17px;line-height:1.75;margin:0}
+  .cards{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:16px;
+  }
+  .card{
+    background:rgba(255,255,255,.66);
+    border:1px solid rgba(255,255,255,.72);
+    border-radius:var(--radius);padding:22px;
+    box-shadow:0 12px 38px rgba(31,48,76,.07);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    transition:transform .5s cubic-bezier(.22,1,.36,1),
+               box-shadow .5s cubic-bezier(.22,1,.36,1),
+               border-color .5s ease;
+    will-change:transform;
+  }
+  .card:hover{
+    transform:translateY(-6px);
+    box-shadow:0 20px 60px rgba(31,48,76,.12);
+    border-color:rgba(255,255,255,.92);
+  }
+  .card h3{margin:0 0 10px;font-size:18px}
+  .card p{margin:0;color:var(--muted);line-height:1.68;font-size:14.5px}
+  .tech-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .tech-item{
+    background:rgba(255,255,255,.68);
+    border:1px solid rgba(255,255,255,.72);
+    border-radius:18px;padding:18px;
+    box-shadow:0 10px 34px rgba(31,48,76,.06);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    transition:transform .45s cubic-bezier(.22,1,.36,1),
+               box-shadow .45s cubic-bezier(.22,1,.36,1);
+  }
+  .tech-item:hover{
+    transform:translateY(-4px);
+    box-shadow:0 16px 48px rgba(31,48,76,.10);
+  }
+  .tech-item b{display:block;font-size:17px;margin-bottom:8px}
+  .tech-item span{display:block;color:var(--muted);font-size:13.5px;line-height:1.6}
+  .code-panel{
+    background:#121827;color:#edf6ff;
+    border-radius:26px;overflow:hidden;
+    box-shadow:0 28px 76px rgba(23,32,51,.24);
+    border:1px solid rgba(255,255,255,.12);
+    transition:box-shadow .5s ease,transform .5s ease;
+  }
+  .code-panel:hover{
+    box-shadow:0 36px 90px rgba(23,32,51,.30);
+    transform:translateY(-3px);
+  }
+  .code-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.04)}
+  .code-head span{color:rgba(238,244,233,.62);font-size:12px}
+  pre{margin:0;padding:22px;overflow:auto;font-size:13px;line-height:1.7}
+  code{font-family:"SFMono-Regular","Cascadia Code","JetBrains Mono",monospace}
+  .kw{color:#93c5fd}.fn{color:#7dd3fc}.str{color:#a7f3d0}.cm{color:#94a3b8}.num{color:#fda4af}
+  .flow{
+    background:rgba(255,255,255,.72);
+    border:1px solid rgba(255,255,255,.72);
+    border-radius:24px;padding:26px;
+    box-shadow:0 14px 44px rgba(31,48,76,.08);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+  }
+  .flow-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .step{
+    background:rgba(247,251,255,.86);
+    border:1px solid var(--line);
+    border-radius:16px;padding:16px;position:relative;
+    transition:transform .45s ease,box-shadow .45s ease;
+  }
+  .step:hover{
+    transform:translateY(-3px);
+    box-shadow:0 8px 24px rgba(31,48,76,.08);
+  }
+  .step span{
+    display:inline-flex;width:26px;height:26px;border-radius:50%;
+    background:linear-gradient(135deg,var(--green),var(--blue));
+    color:white;align-items:center;justify-content:center;
+    font-size:12px;font-weight:800;margin-bottom:12px;
+  }
+  .step h3{font-size:16px;margin:0 0 8px}
+  .step p{font-size:13.5px;color:var(--muted);line-height:1.62;margin:0}
+  .split{display:grid;grid-template-columns:.9fr 1.1fr;gap:18px}
+  .table{
+    background:rgba(255,255,255,.72);
+    border:1px solid rgba(255,255,255,.72);border-radius:20px;overflow:hidden;
+    box-shadow:0 14px 44px rgba(31,48,76,.07);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+  }
+  .row{display:grid;grid-template-columns:150px 1fr;border-bottom:1px solid var(--line)}
+  .row:last-child{border-bottom:0}
+  .row b,.row span{padding:15px 18px}
+  .row b{background:rgba(247,251,255,.86)}
+  .row span{color:var(--muted);line-height:1.62}
+  .proof-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .proof-card{
+    background:linear-gradient(145deg,rgba(255,255,255,.82),rgba(244,249,255,.62));
+    border:1px solid rgba(255,255,255,.72);
+    border-radius:22px;padding:22px;
+    box-shadow:0 12px 42px rgba(31,48,76,.08);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    transition:transform .45s cubic-bezier(.22,1,.36,1),
+               box-shadow .45s cubic-bezier(.22,1,.36,1);
+  }
+  .proof-card:hover{
+    transform:translateY(-5px);
+    box-shadow:0 18px 56px rgba(31,48,76,.12);
+  }
+  .proof-card .label{
+    display:inline-flex;align-items:center;
+    border:1px solid rgba(59,130,246,.18);
+    background:rgba(59,130,246,.08);
+    color:var(--green-dark);border-radius:999px;
+    padding:5px 10px;font-size:12px;font-weight:800;margin-bottom:16px;
+    transition:background .3s ease;
+  }
+  .proof-card:hover .label{background:rgba(59,130,246,.14)}
+  .proof-card h3{font-size:18px;margin:0 0 10px}
+  .proof-card p{margin:0;color:var(--muted);line-height:1.68;font-size:14.5px}
+  .final{padding:76px 0 92px}
+  .final-box{
+    background:linear-gradient(135deg,#111827,#172033 48%,#0b5f72);
+    color:white;border-radius:28px;
+    padding:36px;
+    display:flex;align-items:center;justify-content:space-between;gap:28px;
+    box-shadow:0 26px 80px rgba(23,32,51,.22);
+    transition:box-shadow .5s ease,transform .5s ease;
+  }
+  .final-box:hover{
+    box-shadow:0 34px 100px rgba(23,32,51,.28);
+    transform:translateY(-2px);
+  }
+  .final-box h2{
+    margin:0 0 10px;
+    background:linear-gradient(135deg,#fff,rgba(255,255,255,.8));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .final-box p{margin:0;color:rgba(255,255,255,.68);line-height:1.65}
+  .final-box .btn-secondary{
+    background:rgba(255,255,255,.08);
+    border-color:rgba(255,255,255,.16);
+    color:white;
+  }
+  .final-box .btn-secondary:hover{
+    background:rgba(255,255,255,.14);
+    border-color:rgba(255,255,255,.24);
+  }
+  footer{
+    border-top:1px solid var(--line);
+    padding:28px 0;color:var(--muted);font-size:13px;
+    transition:border-color .5s ease;
+  }
+
+  /* ── Responsive ── */
+  @media(max-width:860px){
+    .hero-grid,.split{grid-template-columns:1fr}
+    .cards,.flow-row,.tech-grid,.proof-grid{grid-template-columns:1fr}
+    .nav-links{display:none}
+    .meta{grid-template-columns:1fr}
+    .final-box{align-items:flex-start;flex-direction:column}
+    .row{grid-template-columns:1fr}
+    .row b{padding-bottom:6px}
+    .reveal,.reveal-scale{transform:translateY(24px)}
+    .reveal-stagger > *{transform:translateY(18px)}
+  }
+  @media(prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+    .reveal,.reveal-scale,.reveal-stagger > *{opacity:1!important;transform:none!important}
+    .demo-panel{animation:none!important}
+  }
+</style>
+</head>
+<body>
+
+<!-- Scroll Progress Indicator -->
+<div id="scroll-progress"></div>
+
+<!-- Background Stage -->
+<div class="bg-stage" aria-hidden="true">
+  <div class="bg-grid"></div>
+  <div class="bg-blob b1" data-depth="0.55"></div>
+  <div class="bg-blob b2" data-depth="0.40"></div>
+  <div class="bg-blob b3" data-depth="0.70"></div>
+  <div class="bg-blob b4" data-depth="0.30"></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const DEMO_URL = "http://101.43.56.2:81/chat/zJ95Ujab5vCnPjg2";
+  const GITHUB_URL = "https://github.com/Yuan1cMax/HairCutAgent";
+
+  /* ── Helpers ── */
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
+  const easeOutQuad = t => t * (2 - t);
+  const easeInOutCubic = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  const q = (s, p) => (p || document).querySelector(s);
+  const qa = (s, p) => Array.from((p || document).querySelectorAll(s));
+
+  /* ── Demo / GitHub links ── */
+  function wireLinks(){
+    qa("[data-demo-link]").forEach(el => {
+      if (DEMO_URL) { el.href = DEMO_URL; return; }
+      el.removeAttribute("href");
+      el.setAttribute("aria-disabled","true");
+      el.title = "Demo 链接待接入";
+      el.addEventListener("click", e => e.preventDefault());
+    });
+    qa("[data-github-link]").forEach(el => { el.href = GITHUB_URL; });
+  }
+
+  /* ── Scroll Progress ── */
+  function scrollProgress(){
+    const bar = document.getElementById("scroll-progress");
+    if (!bar) return;
+    let ticking = false;
+    const update = () => {
+      const h = document.documentElement.scrollHeight - window.innerHeight;
+      const pct = h > 0 ? (window.scrollY / h) * 100 : 0;
+      bar.style.width = pct + "%";
+      ticking = false;
+    };
+    window.addEventListener("scroll", () => {
+      if (!ticking) { requestAnimationFrame(update); ticking = true; }
+    }, { passive: true });
+    update();
+  }
+
+  /* ── Navbar Morph ── */
+  function navbarScroll(){
+    const nav = q("nav");
+    if (!nav) return;
+    let ticking = false;
+    const update = () => {
+      const isCompact = window.scrollY > 80;
+      nav.classList.toggle("nav-compact", isCompact);
+      document.body.classList.toggle("scrolled", window.scrollY > 120);
+      ticking = false;
+    };
+    window.addEventListener("scroll", () => {
+      if (!ticking) { requestAnimationFrame(update); ticking = true; }
+    }, { passive: true });
+    update();
+  }
+
+  /* ── Enhanced Parallax Blobs ── */
+  function parallaxBlobs(){
+    const blobs = qa(".bg-blob");
+    if (!blobs.length) return;
+    // Track per-section color influence
+    const sections = qa("section");
+    let ticking = false;
+
+    const update = () => {
+      const y = window.scrollY;
+      const vh = window.innerHeight;
+      const maxY = Math.max(document.documentElement.scrollHeight - vh, 1);
+
+      blobs.forEach((blob, i) => {
+        const depth = Number(blob.dataset.depth || 0.35);
+        // Much more dramatic movement
+        const offset = y * depth * 0.6;
+        const drift = y * depth * (i % 2 === 0 ? -0.30 : 0.30);
+
+        // Scale: compress at top, expand at bottom (more dramatic)
+        const rawScale = 1 + (y / maxY) * 0.28;
+        const scale = clamp(rawScale, 0.88, 1.32);
+
+        // Opacity: start high, dim gradually but stay visible
+        const rawOpacity = 1.0 - (y / maxY) * 0.65;
+        const opacity = clamp(rawOpacity, 0.32, 1.0);
+
+        blob.style.transform = `translate3d(${drift}px, ${offset}px, 0) scale(${scale})`;
+        blob.style.opacity = String(opacity);
+      });
+
+      // Subtle hue shift on background based on scroll
+      const hueShift = (y / maxY) * 12;
+      document.documentElement.style.setProperty("--hue", hueShift.toFixed(1));
+      document.documentElement.style.setProperty("--scroll-pct", (y / maxY).toFixed(4));
+
+      // Section-aware glow: find which section is most in view
+      let maxVisibility = 0;
+      let activeSection = -1;
+      sections.forEach((sec, i) => {
+        const rect = sec.getBoundingClientRect();
+        const vis = Math.max(0, Math.min(rect.bottom, vh) - Math.max(rect.top, 0)) / vh;
+        if (vis > maxVisibility) { maxVisibility = vis; activeSection = i; }
+      });
+      if (activeSection >= 0) {
+        const colors = [
+          "var(--blue)",    // hero
+          "var(--green)",   // features
+          "var(--blue)",    // workflow
+          "var(--violet)",  // architecture
+          "var(--green)",   // tech
+          "var(--ink)",     // code
+          "var(--coral)",   // demo
+          "var(--ink)",     // final
+        ];
+        const c = colors[Math.min(activeSection, colors.length - 1)] || "var(--blue)";
+        document.documentElement.style.setProperty("--section-accent", c);
+        // Tint section glow
+        const glow = q("section::before"); // can't style pseudo directly, use var
+        const glowMap = {
+          "--blue": "rgba(59,130,246,.08)",
+          "--green": "rgba(15,143,128,.07)",
+          "--violet": "rgba(139,92,246,.07)",
+          "--coral": "rgba(249,115,122,.07)",
+          "--ink": "rgba(23,32,51,.05)",
+        };
+        const glowColor = glowMap[c] || "rgba(59,130,246,.06)";
+        document.documentElement.style.setProperty("--glow-tint", glowColor);
+      }
+
+      ticking = false;
+    };
+
+    window.addEventListener("scroll", () => {
+      if (!ticking) { requestAnimationFrame(update); ticking = true; }
+    }, { passive: true });
+    update();
+  }
+
+  /* ── Intersection Observer Reveals ── */
+  function revealOnScroll(){
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        // Toggle visible — add when scrolled into view, remove when scrolled out
+        // isIntersecting=true → entering viewport; false → leaving viewport
+        entry.target.classList.toggle("visible", entry.isIntersecting);
+      });
+    }, { threshold: 0, rootMargin: "0px 0px -60px 0px" });
+
+    // Observe all .reveal, .reveal-scale, .reveal-stagger
+    qa(".reveal, .reveal-scale, .reveal-stagger").forEach(el => observer.observe(el));
+  }
+
+  /* ── Hero parallax (content fades as you scroll past) ── */
+  function heroParallax(){
+    const hero = q(".hero");
+    const heroGrid = q(".hero-grid");
+    if (!hero || !heroGrid) return;
+    let ticking = false;
+
+    const update = () => {
+      const rect = hero.getBoundingClientRect();
+      const progress = clamp(-rect.top / (rect.height + window.innerHeight), 0, 1);
+
+      // Hero content slowly fades and scales as it scrolls up
+      const contentScale = 1 - progress * 0.04;
+      const contentOpacity = 1 - progress * 0.7;
+      heroGrid.style.transform = `scale(${contentScale})`;
+      heroGrid.style.opacity = String(contentOpacity);
+      heroGrid.style.filter = `blur(${(progress * 2).toFixed(1)}px)`;
+
+      ticking = false;
+    };
+
+    window.addEventListener("scroll", () => {
+      if (!ticking) { requestAnimationFrame(update); ticking = true; }
+    }, { passive: true });
+    update();
+  }
+
+  /* ── Counter animation for meta cards ── */
+  function animateCounters(){
+    const counters = qa(".meta-card strong");
+    if (!counters.length) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        const el = entry.target;
+        const text = el.textContent.trim();
+        const num = parseInt(text, 10);
+        if (isNaN(num)) return;
+
+        let current = 0;
+        const duration = 1200;
+        const start = performance.now();
+
+        function frame(now) {
+          const elapsed = now - start;
+          const progress = Math.min(elapsed / duration, 1);
+          const eased = easeOutQuad(progress);
+          current = Math.round(eased * num);
+          el.textContent = text.replace(/\d+/, String(current));
+          if (progress < 1) requestAnimationFrame(frame);
+          else el.textContent = text; // restore exact text
+        }
+        requestAnimationFrame(frame);
+        observer.unobserve(el);
+      });
+    }, { threshold: 0.5 });
+
+    counters.forEach(el => observer.observe(el));
+  }
+
+  /* ── Init ── */
+  document.addEventListener("DOMContentLoaded", () => {
+    wireLinks();
+
+    // Scroll-driven effects
+    scrollProgress();
+    navbarScroll();
+    parallaxBlobs();
+    heroParallax();
+    revealOnScroll();
+
+    // Micro-animations
+    animateCounters();
+  });
+})();
+</script>
+
+<nav>
+  <div class="wrap nav-inner">
+    <div class="brand"><span class="mark">H</span><span>HairCutAgent</span></div>
+    <div class="nav-links">
+      <a href="#features">功能</a>
+      <a href="#workflow">流程</a>
+      <a href="#architecture">架构</a>
+      <a href="#tech">技术栈</a>
+      <a href="#code">源码</a>
+      <a href="#demo">展示方式</a>
+      <a class="nav-cta" data-demo-link target="_blank" rel="noopener">立即体验</a>
+    </div>
+  </div>
+</nav>
+
+<main>
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <div class="eyebrow">Dify Agent + FastAPI + SQLite</div>
+        <h1>理发店智能预约助手</h1>
+        <p class="hero-copy">一个面向门店预约场景的 AI Agent 业务系统展示。用户通过自然语言完成预约、改期、取消、价格查询和发型咨询，后台同步维护服务价格、营业规则和预约记录。</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" data-demo-link target="_blank" rel="noopener">立即体验 Demo →</a>
+          <a class="btn btn-secondary" data-github-link target="_blank" rel="noopener">查看 GitHub 仓库</a>
+        </div>
+        <div class="meta">
+          <div class="meta-card"><strong>7 类</strong><span>意图路由</span></div>
+          <div class="meta-card"><strong>6 项</strong><span>发型推荐 Slot</span></div>
+          <div class="meta-card"><strong>4 模块</strong><span>轻量管理后台</span></div>
+        </div>
+      </div>
+      <div class="demo-panel" aria-label="预约对话示例">
+        <div class="phone">
+          <div class="phone-head"><div class="dots"><i></i><i></i><i></i></div><strong>预约助手</strong><span class="mono">8003</span></div>
+          <div class="chat">
+            <div class="bubble bot">您好，我可以帮您预约理发、查询价格，也可以推荐适合的发型。</div>
+            <div class="bubble user">我想明天下午剪头发，西湖店。</div>
+            <div class="bubble bot">可以的。请问您希望预约哪项服务？也可以直接说"洗剪吹"或"男士剪发"。</div>
+            <div class="bubble user">洗剪吹，三点。</div>
+            <div class="bubble bot">已为您校验营业时间和可预约时段。请再提供姓名和手机号用于确认预约。</div>
+            <div class="status">
+              <div><b>字段校验</b><span>缺什么追问什么</span></div>
+              <div><b>业务校验</b><span>冲突/休息日/午休拦截</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="features">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <div class="section-kicker">What it solves</div>
+        <h2>从"聊天"推进到"可执行预约"</h2>
+        <p>项目重点不是生成一段客服话术，而是把自然语言输入转成确定性的业务动作，并让结果进入同一套预约数据。</p>
+      </div>
+      <div class="cards reveal-stagger">
+        <div class="card"><h3>多轮预约补齐</h3><p>识别用户意图后提取姓名、手机号、门店、服务、日期和时间，缺失字段按优先级追问。</p></div>
+        <div class="card"><h3>预约生命周期</h3><p>支持创建预约、改期、取消、查询已有预约，并对不存在记录返回明确业务提示。</p></div>
+        <div class="card"><h3>实时价格查询</h3><p>服务项目和价格来自后端数据表，后台调整后，AI 查询结果同步变化。</p></div>
+        <div class="card"><h3>营业规则校验</h3><p>支持门店营业时间、午休、休息日和节假日校验，避免无效预约进入数据库。</p></div>
+        <div class="card"><h3>发型推荐</h3><p>按性别、脸型、发质、长度、风格和打理成本收集条件，再进入知识库检索与推荐生成。</p></div>
+        <div class="card"><h3>轻量后台</h3><p>提供设计师、服务项目、营业时间和预约记录管理，用于演示前后台数据联动。</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="workflow">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <div class="section-kicker">Workflow</div>
+        <h2>工作流拆分让业务更可控</h2>
+        <p>预约场景有必填字段、异常分支和状态变更，使用 Dify 工作流拆成多个节点比单一 Prompt 更稳定、更容易调试。</p>
+      </div>
+      <div class="flow reveal">
+        <div class="flow-row reveal-stagger">
+          <div class="step"><span>1</span><h3>意图识别</h3><p>区分预约、价格查询、门店查询、发型推荐、告别和兜底输入。</p></div>
+          <div class="step"><span>2</span><h3>参数提取</h3><p>从用户输入和多轮上下文中提取日期、时间、门店、服务和联系方式。</p></div>
+          <div class="step"><span>3</span><h3>字段校验</h3><p>检查必填项、手机号格式、营业时间和节假日，必要时只追问一个字段。</p></div>
+          <div class="step"><span>4</span><h3>业务执行</h3><p>通过 FastAPI 写入或查询 SQLite，再由回复节点生成自然语言结果。</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="architecture">
+    <div class="wrap split">
+      <div class="section-head reveal">
+        <div class="section-kicker">Architecture</div>
+        <h2>AI 负责理解，后端负责状态</h2>
+        <p>Dify 处理自然语言理解、Slot 补齐和回复生成；FastAPI 处理确定性的数据库查询、预约冲突检测和营业规则校验。</p>
+      </div>
+      <div class="table reveal">
+        <div class="row"><b>Dify</b><span>Advanced Chat Workflow、意图分类、多轮参数提取、RAG 发型推荐、回复生成。</span></div>
+        <div class="row"><b>FastAPI</b><span>`/dispatch` 统一入口，分发预约、改期、取消、查询和后台管理接口。</span></div>
+        <div class="row"><b>SQLite</b><span>保存 designers、services、business_hours、slots、bookings 等核心业务表。</span></div>
+        <div class="row"><b>Admin UI</b><span>轻量管理后台，用于查看预约记录、维护服务价格和营业时间。</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="tech">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <div class="section-kicker">Tech Stack</div>
+        <h2>技术栈不只停留在 Dify</h2>
+        <p>项目把工作流编排、后端接口、数据库状态和管理后台串起来，形成一个可验证的业务闭环。</p>
+      </div>
+      <div class="tech-grid reveal-stagger">
+        <div class="tech-item"><b>Dify Advanced Chat</b><span>意图分类、参数提取、多轮追问、异常分支和回复生成。</span></div>
+        <div class="tech-item"><b>DeepSeek / RAG</b><span>用于对话理解、发型推荐生成，以及知识库检索后的语义重排。</span></div>
+        <div class="tech-item"><b>FastAPI</b><span>统一 HTTP 入口、预约业务分发、管理后台接口和友好错误响应。</span></div>
+        <div class="tech-item"><b>SQLite</b><span>保存预约、服务价格、营业规则、设计师和可预约时段。</span></div>
+        <div class="tech-item"><b>HTML / CSS / JS</b><span>实现轻量后台和项目展示页，无前端框架也能完整演示。</span></div>
+        <div class="tech-item"><b>Nginx / Ubuntu</b><span>部署 Dify、FastAPI 后端和静态展示页，形成公网可访问 Demo。</span></div>
+        <div class="tech-item"><b>GitHub</b><span>公开仓库完成历史清理、运行产物忽略和敏感信息检查。</span></div>
+        <div class="tech-item"><b>Prompt Engineering</b><span>将预约口语表达转成可执行字段，并控制追问顺序和兜底话术。</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="code">
+    <div class="wrap split">
+      <div class="section-head reveal">
+        <div class="section-kicker">Source Code</div>
+        <h2>后端用确定性逻辑承接 AI 输出</h2>
+        <p>LLM 负责理解用户怎么说，后端负责判断能不能做、怎么落库、如何返回业务状态。下面是项目中的核心分发思路节选。</p>
+      </div>
+      <div class="code-panel reveal-scale">
+        <div class="code-head"><strong>main.py</strong><span>FastAPI / dispatch</span></div>
+<pre><code><span class="kw">@app.post</span>(<span class="str">"/dispatch"</span>)
+<span class="kw">def</span> <span class="fn">dispatch</span>(req: dict):
+    action = req.get(<span class="str">"action"</span>)
+    phone = req.get(<span class="str">"phone"</span>)
+    date = req.get(<span class="str">"date"</span>)
+
+    <span class="cm"># 先做营业时间、节假日、午休等确定性校验</span>
+    <span class="kw">if</span> action in (<span class="str">"create"</span>, <span class="str">"reschedule"</span>) and date:
+        <span class="kw">if</span> is_holiday(date, req.get(<span class="str">"store"</span>)):
+            <span class="kw">return</span> {<span class="str">"status"</span>: <span class="str">"holiday"</span>}
+
+    <span class="cm"># 再按业务动作分发，避免把状态变更交给 Prompt</span>
+    <span class="kw">if</span> action == <span class="str">"query_booking"</span>:
+        <span class="kw">return</span> query_booking(phone=phone)
+    <span class="kw">if</span> action == <span class="str">"create"</span>:
+        <span class="kw">return</span> create_booking(...)
+    <span class="kw">if</span> action == <span class="str">"cancel"</span>:
+        <span class="kw">return</span> cancel_by_phone(phone)</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <section id="demo">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <div class="section-kicker">Demo Evidence</div>
+        <h2>可现场验证的业务结果</h2>
+        <p>对话结果可以和后台数据相互印证，用于验证这套预约系统是否真正跑通，而不只是停留在静态说明页面。</p>
+      </div>
+      <div class="proof-grid reveal-stagger">
+        <div class="proof-card">
+          <span class="label">预约落库</span>
+          <h3>对话创建真实记录</h3>
+          <p>用户补齐姓名、手机号、门店、服务和时间后，后端创建预约记录，管理后台可直接查看。</p>
+        </div>
+        <div class="proof-card">
+          <span class="label">价格同步</span>
+          <h3>后台数据影响 AI 回复</h3>
+          <p>服务价格从后端接口读取，后台调整服务项目后，价格查询链路会返回最新结果。</p>
+        </div>
+        <div class="proof-card">
+          <span class="label">异常兜底</span>
+          <h3>业务失败也有明确状态</h3>
+          <p>预约冲突、非营业时间、节假日或记录不存在时，系统返回可解释的业务提示，而不是泛化回答。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="final">
+    <div class="wrap final-box reveal">
+      <div>
+        <h2>体验 HairCutAgent</h2>
+        <p>可直接体验预约与价格查询链路，也可以查看 GitHub 仓库了解后端实现和管理后台代码。</p>
+      </div>
+      <div class="cta-row">
+        <a class="btn btn-primary" data-demo-link target="_blank" rel="noopener">立即体验 Demo →</a>
+        <a class="btn btn-secondary" data-github-link target="_blank" rel="noopener">GitHub 仓库</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">HairCutAgent · 理发店智能预约助手 · Built with Dify, FastAPI and SQLite</div>
+</footer>
+
+</body>
+</html>

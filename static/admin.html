@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>理发店预约管理后台</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --sidebar: #111827;
+      --sidebar-muted: #94a3b8;
+      --sidebar-active: #1d4ed8;
+      --line: #e5e7eb;
+      --text: #0f172a;
+      --muted: #64748b;
+      --danger: #dc2626;
+      --success: #16a34a;
+      --shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .app {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      width: 260px;
+      background: linear-gradient(180deg, #0f172a, #111827 60%, #1e293b);
+      color: #fff;
+      padding: 28px 18px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+    }
+
+    .brand {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .brand-sub {
+      color: var(--sidebar-muted);
+      font-size: 13px;
+      line-height: 1.6;
+      margin-bottom: 28px;
+    }
+
+    .nav {
+      display: grid;
+      gap: 10px;
+    }
+
+    .nav button {
+      width: 100%;
+      border: none;
+      background: transparent;
+      color: #fff;
+      text-align: left;
+      padding: 14px 16px;
+      border-radius: 14px;
+      cursor: pointer;
+      font-size: 15px;
+      transition: background 0.2s ease, transform 0.2s ease;
+    }
+
+    .nav button span {
+      display: block;
+      font-size: 12px;
+      margin-top: 4px;
+      color: var(--sidebar-muted);
+    }
+
+    .nav button.active {
+      background: rgba(29, 78, 216, 0.9);
+      box-shadow: 0 8px 20px rgba(29, 78, 216, 0.35);
+    }
+
+    .nav button:hover {
+      background: rgba(255, 255, 255, 0.08);
+      transform: translateX(2px);
+    }
+
+    .content {
+      margin-left: 260px;
+      width: calc(100% - 260px);
+      padding: 28px;
+    }
+
+    .header {
+      background: var(--panel);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px 28px;
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 28px;
+    }
+
+    .header p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .module {
+      display: none;
+      background: var(--panel);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 22px;
+    }
+
+    .module.active { display: block; }
+
+    .module-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    .module-title {
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .actions,
+    .filters {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    button.primary,
+    button.secondary,
+    button.danger {
+      border: none;
+      border-radius: 12px;
+      padding: 10px 16px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+
+    button.primary { background: #2563eb; color: #fff; }
+    button.secondary { background: #e2e8f0; color: #0f172a; }
+    button.danger { background: #fee2e2; color: var(--danger); }
+
+    button.primary:hover,
+    button.secondary:hover,
+    button.danger:hover {
+      opacity: 0.92;
+      transform: translateY(-1px);
+    }
+
+    input, select, textarea {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 14px;
+      min-height: 42px;
+      width: 100%;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th, td {
+      padding: 14px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--muted);
+      font-weight: 600;
+      background: #f8fafc;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .status-active { background: #dcfce7; color: var(--success); }
+    .status-inactive,
+    .status-cancelled { background: #fee2e2; color: var(--danger); }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 30;
+      padding: 20px;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      width: min(640px, 100%);
+      background: #fff;
+      border-radius: 24px;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
+      overflow: hidden;
+    }
+
+    .modal-header {
+      padding: 22px 24px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .modal-body {
+      padding: 22px 24px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .form-grid .full { grid-column: 1 / -1; }
+
+    .field label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .modal-footer {
+      padding: 18px 24px 24px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .message {
+      margin-bottom: 16px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .message.show { display: block; }
+    .message.success { background: #dcfce7; color: var(--success); }
+    .message.error { background: #fee2e2; color: var(--danger); }
+
+    .empty {
+      color: var(--muted);
+      text-align: center;
+      padding: 36px 0;
+    }
+
+    @media (max-width: 980px) {
+      .sidebar {
+        position: static;
+        width: 100%;
+        border-radius: 0 0 24px 24px;
+      }
+
+      .content {
+        margin-left: 0;
+        width: 100%;
+      }
+
+      .app {
+        display: block;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .header,
+      .module {
+        padding: 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">理发店后台</div>
+      <div class="brand-sub">管理设计师、服务项目、营业时间与预约记录，和 Agent 共用同一套业务数据。</div>
+      <nav class="nav">
+        <button class="active" data-target="designers">
+          设计师管理
+          <span>增删改查 / 可预约状态</span>
+        </button>
+        <button data-target="services">
+          服务项目管理
+          <span>价格、时长、启用状态</span>
+        </button>
+        <button data-target="hours">
+          营业时间管理
+          <span>门店营业、午休、休息日、节假日</span>
+        </button>
+        <button data-target="bookings">
+          预约记录
+          <span>按日期筛选 / 仅支持取消</span>
+        </button>
+      </nav>
+    </aside>
+
+    <main class="content">
+      <section class="header">
+        <div>
+          <h1>理发店预约管理系统</h1>
+          <p>轻量管理后台，适合理发店预约 Agent 的业务配置和数据维护。</p>
+        </div>
+        <button class="secondary" id="refreshAllBtn">刷新全部数据</button>
+      </section>
+
+      <div id="message" class="message"></div>
+
+      <section id="designers" class="module active">
+        <div class="module-top">
+          <div class="module-title">设计师管理</div>
+          <div class="actions">
+            <button class="primary" id="addDesignerBtn">新增设计师</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>姓名</th>
+                <th>擅长项目</th>
+                <th>可预约状态</th>
+                <th>记录状态</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="designersTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="services" class="module">
+        <div class="module-top">
+          <div class="module-title">服务项目管理</div>
+          <div class="actions">
+            <button class="primary" id="addServiceBtn">新增服务项目</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>名称</th>
+                <th>价格</th>
+                <th>时长（分钟）</th>
+                <th>状态</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="servicesTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="hours" class="module">
+        <div class="module-top">
+          <div class="module-title">营业时间管理</div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>门店</th>
+                <th>营业时间</th>
+                <th>午休</th>
+                <th>休息日</th>
+                <th>节假日</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="hoursTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="bookings" class="module">
+        <div class="module-top">
+          <div class="module-title">预约记录</div>
+          <div class="filters">
+            <input type="date" id="bookingDateFilter" />
+            <input type="text" id="bookingDesignerFilter" placeholder="按设计师筛选" />
+            <button class="secondary" id="bookingFilterBtn">筛选</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>顾客信息</th>
+                <th>门店</th>
+                <th>设计师</th>
+                <th>服务项目</th>
+                <th>预约时间</th>
+                <th>状态</th>
+                <th>创建时间</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="bookingsTable"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="modalOverlay" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modalTitle">编辑</h3>
+        <button class="secondary" id="closeModalBtn">关闭</button>
+      </div>
+      <div class="modal-body">
+        <form id="modalForm" class="form-grid"></form>
+      </div>
+      <div class="modal-footer">
+        <button class="secondary" id="cancelModalBtn" type="button">取消</button>
+        <button class="primary" id="saveModalBtn" type="button">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const state = {
+      currentModule: "designers",
+      modalMode: "create",
+      modalType: "",
+      modalId: null,
+      designers: [],
+      services: [],
+      hours: [],
+      bookings: []
+    };
+
+    const $ = (selector) => document.querySelector(selector);
+    const $$ = (selector) => Array.from(document.querySelectorAll(selector));
+
+    const modalOverlay = $("#modalOverlay");
+    const modalForm = $("#modalForm");
+    const modalTitle = $("#modalTitle");
+    const messageEl = $("#message");
+
+    function showMessage(text, type = "success") {
+      messageEl.textContent = text;
+      messageEl.className = `message show ${type}`;
+      clearTimeout(showMessage._timer);
+      showMessage._timer = setTimeout(() => {
+        messageEl.className = "message";
+      }, 3000);
+    }
+
+    function switchModule(moduleId) {
+      state.currentModule = moduleId;
+      $$(".module").forEach((module) => {
+        module.classList.toggle("active", module.id === moduleId);
+      });
+      $$(".nav button").forEach((button) => {
+        button.classList.toggle("active", button.dataset.target === moduleId);
+      });
+    }
+
+    async function request(url, options = {}) {
+      const response = await fetch(url, {
+        headers: {
+          "Content-Type": "application/json",
+          ...(options.headers || {})
+        },
+        ...options
+      });
+
+      let data = {};
+      try {
+        data = await response.json();
+      } catch (error) {
+        data = {};
+      }
+
+      if (!response.ok) {
+        throw new Error(data.detail || data.message || "请求失败");
+      }
+      return data;
+    }
+
+    function renderEmpty(tbody, text = "暂无数据") {
+      tbody.innerHTML = `<tr><td colspan="9" class="empty">${text}</td></tr>`;
+    }
+
+    function statusPill(text, active = true) {
+      return `<span class="status-pill ${active ? "status-active" : "status-inactive"}">${text}</span>`;
+    }
+
+    function bookingStatusPill(status) {
+      if (status === "active") return `<span class="status-pill status-active">active</span>`;
+      return `<span class="status-pill status-cancelled">${status}</span>`;
+    }
+
+    async function loadDesigners() {
+      const data = await request("/admin/designers");
+      state.designers = data.items || [];
+      const tbody = $("#designersTable");
+      if (!state.designers.length) {
+        renderEmpty(tbody, "暂无设计师记录");
+        return;
+      }
+      tbody.innerHTML = state.designers.map((item) => `
+        <tr>
+          <td>${item.id}</td>
+          <td>${item.name}</td>
+          <td>${item.specialty || "-"}</td>
+          <td>${item.is_available ? statusPill("可预约") : statusPill("不可预约", false)}</td>
+          <td>${item.status === "active" ? statusPill("active") : statusPill(item.status, false)}</td>
+          <td>
+            <button class="secondary" onclick="openDesignerModal('edit', ${item.id})">编辑</button>
+            <button class="danger" onclick="deleteDesigner(${item.id})">删除</button>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    async function loadServices() {
+      const data = await request("/admin/services");
+      state.services = data.items || [];
+      const tbody = $("#servicesTable");
+      if (!state.services.length) {
+        renderEmpty(tbody, "暂无服务项目");
+        return;
+      }
+      tbody.innerHTML = state.services.map((item) => `
+        <tr>
+          <td>${item.id}</td>
+          <td>${item.name}</td>
+          <td>¥${Number(item.price).toFixed(2)}</td>
+          <td>${item.duration_minutes}</td>
+          <td>${item.is_active ? statusPill("启用") : statusPill("停用", false)}</td>
+          <td>
+            <button class="secondary" onclick="openServiceModal('edit', ${item.id})">编辑</button>
+            <button class="danger" onclick="deleteService(${item.id})">删除</button>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    async function loadHours() {
+      const data = await request("/admin/business_hours");
+      state.hours = data.items || [];
+      const tbody = $("#hoursTable");
+      if (!state.hours.length) {
+        renderEmpty(tbody, "暂无营业时间配置");
+        return;
+      }
+      const weekdayMap = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
+      tbody.innerHTML = state.hours.map((item) => `
+        <tr>
+          <td>${item.id}</td>
+          <td>${item.store_name}</td>
+          <td>${item.open_time} - ${item.close_time}</td>
+          <td>${item.break_start || "-"} - ${item.break_end || "-"}</td>
+          <td>${(item.weekly_off || []).map((i) => weekdayMap[i] || i).join("、") || "-"}</td>
+          <td>${(item.holidays || []).join("、") || "-"}</td>
+          <td>
+            <button class="secondary" onclick="openHoursModal(${item.id})">编辑</button>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    async function loadBookings() {
+      const date = $("#bookingDateFilter").value;
+      const designer = $("#bookingDesignerFilter").value.trim();
+      const query = new URLSearchParams();
+      if (date) query.set("date", date);
+      if (designer) query.set("designer", designer);
+
+      const data = await request(`/admin/bookings${query.toString() ? `?${query.toString()}` : ""}`);
+      state.bookings = data.items || [];
+      const tbody = $("#bookingsTable");
+      if (!state.bookings.length) {
+        renderEmpty(tbody, "暂无预约记录");
+        return;
+      }
+      tbody.innerHTML = state.bookings.map((item) => `
+        <tr>
+          <td>${item.id}</td>
+          <td>
+            <strong>${item.customer_name || "未填写"}</strong><br />
+            <span style="color: var(--muted)">${item.customer_phone || "-"}</span>
+          </td>
+          <td>${item.store || "-"}</td>
+          <td>${item.designer_name}</td>
+          <td>${item.service || "-"}</td>
+          <td>${item.date} ${item.time}</td>
+          <td>${bookingStatusPill(item.status)}</td>
+          <td>${item.created_at || "-"}</td>
+          <td>
+            ${item.status === "active"
+              ? `<button class="danger" onclick="cancelBooking(${item.id})">取消预约</button>`
+              : `<span style="color: var(--muted)">不可操作</span>`}
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    function openModal(type, mode, id = null) {
+      state.modalType = type;
+      state.modalMode = mode;
+      state.modalId = id;
+      modalForm.innerHTML = "";
+      modalOverlay.classList.add("open");
+    }
+
+    function closeModal() {
+      modalOverlay.classList.remove("open");
+      modalForm.innerHTML = "";
+      state.modalType = "";
+      state.modalId = null;
+    }
+
+    function createField({ name, label, type = "text", value = "", options = [], full = false }) {
+      const wrapper = document.createElement("div");
+      wrapper.className = `field${full ? " full" : ""}`;
+      let inputHtml = "";
+
+      if (type === "select") {
+        inputHtml = `
+          <select name="${name}">
+            ${options.map((option) => `
+              <option value="${option.value}" ${String(option.value) === String(value) ? "selected" : ""}>
+                ${option.label}
+              </option>
+            `).join("")}
+          </select>
+        `;
+      } else if (type === "textarea") {
+        inputHtml = `<textarea name="${name}" rows="4">${value ?? ""}</textarea>`;
+      } else {
+        inputHtml = `<input type="${type}" name="${name}" value="${value ?? ""}" />`;
+      }
+
+      wrapper.innerHTML = `<label>${label}</label>${inputHtml}`;
+      return wrapper;
+    }
+
+    function openDesignerModal(mode, id = null) {
+      const item = state.designers.find((designer) => designer.id === id) || {};
+      openModal("designer", mode, id);
+      modalTitle.textContent = mode === "create" ? "新增设计师" : "编辑设计师";
+      modalForm.append(
+        createField({ name: "name", label: "设计师姓名", value: item.name || "" }),
+        createField({ name: "specialty", label: "擅长项目", value: item.specialty || "", full: true }),
+        createField({
+          name: "is_available",
+          label: "可预约状态",
+          type: "select",
+          value: item.is_available ?? 1,
+          options: [
+            { label: "可预约", value: 1 },
+            { label: "不可预约", value: 0 }
+          ]
+        })
+      );
+    }
+
+    function openServiceModal(mode, id = null) {
+      const item = state.services.find((service) => service.id === id) || {};
+      openModal("service", mode, id);
+      modalTitle.textContent = mode === "create" ? "新增服务项目" : "编辑服务项目";
+      modalForm.append(
+        createField({ name: "name", label: "项目名称", value: item.name || "" }),
+        createField({ name: "price", label: "价格", type: "number", value: item.price ?? "" }),
+        createField({ name: "duration_minutes", label: "时长（分钟）", type: "number", value: item.duration_minutes ?? "" }),
+        createField({
+          name: "is_active",
+          label: "启用状态",
+          type: "select",
+          value: item.is_active ?? 1,
+          options: [
+            { label: "启用", value: 1 },
+            { label: "停用", value: 0 }
+          ]
+        })
+      );
+    }
+
+    function openHoursModal(id) {
+      const item = state.hours.find((hour) => hour.id === id);
+      if (!item) return;
+      openModal("hours", "edit", id);
+      modalTitle.textContent = "编辑营业时间";
+      modalForm.append(
+        createField({ name: "store_name", label: "门店名称", value: item.store_name || "" }),
+        createField({ name: "open_time", label: "营业开始", type: "time", value: item.open_time || "" }),
+        createField({ name: "close_time", label: "营业结束", type: "time", value: item.close_time || "" }),
+        createField({ name: "break_start", label: "午休开始", type: "time", value: item.break_start || "" }),
+        createField({ name: "break_end", label: "午休结束", type: "time", value: item.break_end || "" }),
+        createField({
+          name: "weekly_off",
+          label: "每周休息日（JSON数组，如 [0]）",
+          value: JSON.stringify(item.weekly_off || []),
+          full: true
+        }),
+        createField({
+          name: "holidays",
+          label: "节假日（JSON数组，如 [\"2026-01-01\"]）",
+          value: JSON.stringify(item.holidays || []),
+          full: true
+        })
+      );
+    }
+
+    function getFormData() {
+      const formData = new FormData(modalForm);
+      return Object.fromEntries(formData.entries());
+    }
+
+    async function saveModal() {
+      try {
+        if (state.modalType === "designer") {
+          const raw = getFormData();
+          const payload = {
+            name: raw.name.trim(),
+            specialty: raw.specialty.trim(),
+            is_available: Number(raw.is_available)
+          };
+          if (state.modalMode === "create") {
+            await request("/admin/designers", {
+              method: "POST",
+              body: JSON.stringify(payload)
+            });
+            showMessage("设计师已新增");
+          } else {
+            await request(`/admin/designers/${state.modalId}`, {
+              method: "PUT",
+              body: JSON.stringify(payload)
+            });
+            showMessage("设计师已更新");
+          }
+          await loadDesigners();
+        }
+
+        if (state.modalType === "service") {
+          const raw = getFormData();
+          const payload = {
+            name: raw.name.trim(),
+            price: Number(raw.price),
+            duration_minutes: Number(raw.duration_minutes),
+            is_active: Number(raw.is_active)
+          };
+          if (state.modalMode === "create") {
+            await request("/admin/services", {
+              method: "POST",
+              body: JSON.stringify(payload)
+            });
+            showMessage("服务项目已新增");
+          } else {
+            await request(`/admin/services/${state.modalId}`, {
+              method: "PUT",
+              body: JSON.stringify(payload)
+            });
+            showMessage("服务项目已更新");
+          }
+          await loadServices();
+        }
+
+        if (state.modalType === "hours") {
+          const raw = getFormData();
+          const payload = {
+            store_name: raw.store_name.trim(),
+            open_time: raw.open_time,
+            close_time: raw.close_time,
+            break_start: raw.break_start || null,
+            break_end: raw.break_end || null,
+            weekly_off: JSON.parse(raw.weekly_off || "[]"),
+            holidays: JSON.parse(raw.holidays || "[]")
+          };
+          await request(`/admin/business_hours/${state.modalId}`, {
+            method: "PUT",
+            body: JSON.stringify(payload)
+          });
+          showMessage("营业时间已更新");
+          await loadHours();
+        }
+
+        closeModal();
+      } catch (error) {
+        showMessage(error.message || "保存失败", "error");
+      }
+    }
+
+    async function deleteDesigner(id) {
+      if (!confirm("确定要删除这个设计师吗？删除将做软删除处理。")) return;
+      try {
+        await request(`/admin/designers/${id}`, { method: "DELETE" });
+        showMessage("设计师已删除");
+        await loadDesigners();
+      } catch (error) {
+        showMessage(error.message || "删除失败", "error");
+      }
+    }
+
+    async function deleteService(id) {
+      if (!confirm("确定要删除这个服务项目吗？删除将做软删除处理。")) return;
+      try {
+        await request(`/admin/services/${id}`, { method: "DELETE" });
+        showMessage("服务项目已删除");
+        await loadServices();
+      } catch (error) {
+        showMessage(error.message || "删除失败", "error");
+      }
+    }
+
+    async function cancelBooking(id) {
+      if (!confirm("确定要取消这条预约记录吗？")) return;
+      try {
+        await request(`/admin/bookings/${id}/cancel`, {
+          method: "POST",
+          body: JSON.stringify({ reason: "后台取消" })
+        });
+        showMessage("预约已取消");
+        await loadBookings();
+      } catch (error) {
+        showMessage(error.message || "取消失败", "error");
+      }
+    }
+
+    async function refreshAll() {
+      try {
+        await Promise.all([
+          loadDesigners(),
+          loadServices(),
+          loadHours(),
+          loadBookings()
+        ]);
+        showMessage("全部数据已刷新");
+      } catch (error) {
+        showMessage(error.message || "刷新失败", "error");
+      }
+    }
+
+    window.openDesignerModal = openDesignerModal;
+    window.openServiceModal = openServiceModal;
+    window.openHoursModal = openHoursModal;
+    window.deleteDesigner = deleteDesigner;
+    window.deleteService = deleteService;
+    window.cancelBooking = cancelBooking;
+
+    $$(".nav button").forEach((button) => {
+      button.addEventListener("click", () => switchModule(button.dataset.target));
+    });
+
+    $("#addDesignerBtn").addEventListener("click", () => openDesignerModal("create"));
+    $("#addServiceBtn").addEventListener("click", () => openServiceModal("create"));
+    $("#closeModalBtn").addEventListener("click", closeModal);
+    $("#cancelModalBtn").addEventListener("click", closeModal);
+    $("#saveModalBtn").addEventListener("click", saveModal);
+    $("#refreshAllBtn").addEventListener("click", refreshAll);
+    $("#bookingFilterBtn").addEventListener("click", loadBookings);
+    modalOverlay.addEventListener("click", (event) => {
+      if (event.target === modalOverlay) closeModal();
+    });
+
+    refreshAll();
+  </script>
+</body>
+</html>

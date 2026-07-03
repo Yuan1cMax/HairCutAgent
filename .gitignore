@@ -1,0 +1,22 @@
+# Bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs
+*.log
+nohup.out
+
+# Local data
+barber.db
+*.sqlite
+*.sqlite3
+
+# Local snapshots / one-off maintenance scripts
+*.bak
+*.bak-*
+fix_dispatch.py
+
+# OS/editor
+.DS_Store
+Thumbs.db
