@@ -804,7 +804,7 @@
       <div>
         <div class="eyebrow">Dify Agent + FastAPI + SQLite</div>
         <h1>理发店智能预约助手</h1>
-        <p class="hero-copy">一个面向门店预约场景的 AI Agent 业务系统展示。用户通过自然语言完成预约、改期、取消、价格查询和发型咨询，后台同步维护服务价格、营业规则和预约记录。</p>
+        <p class="hero-copy">HairCutAgent 面向门店预约场景，支持用户通过自然语言完成预约、改期、取消、价格查询和发型咨询，后台同步维护服务价格、营业规则和预约记录。</p>
         <div class="cta-row">
           <a class="btn btn-primary" data-demo-link target="_blank" rel="noopener">立即体验 Demo →</a>
           <a class="btn btn-secondary" data-github-link target="_blank" rel="noopener">查看 GitHub 仓库</a>
@@ -847,7 +847,7 @@
         <div class="card"><h3>实时价格查询</h3><p>服务项目和价格来自后端数据表，后台调整后，AI 查询结果同步变化。</p></div>
         <div class="card"><h3>营业规则校验</h3><p>支持门店营业时间、午休、休息日和节假日校验，避免无效预约进入数据库。</p></div>
         <div class="card"><h3>发型推荐</h3><p>按性别、脸型、发质、长度、风格和打理成本收集条件，再进入知识库检索与推荐生成。</p></div>
-        <div class="card"><h3>轻量后台</h3><p>提供设计师、服务项目、营业时间和预约记录管理，用于演示前后台数据联动。</p></div>
+        <div class="card"><h3>轻量后台</h3><p>提供设计师、服务项目、营业时间和预约记录管理，前后台数据保持同步。</p></div>
       </div>
     </div>
   </section>
@@ -881,7 +881,7 @@
         <div class="row"><b>Dify</b><span>Advanced Chat Workflow、意图分类、多轮参数提取、RAG 发型推荐、回复生成。</span></div>
         <div class="row"><b>FastAPI</b><span>`/dispatch` 统一入口，分发预约、改期、取消、查询和后台管理接口。</span></div>
         <div class="row"><b>SQLite</b><span>保存 designers、services、business_hours、slots、bookings 等核心业务表。</span></div>
-        <div class="row"><b>Admin UI</b><span>轻量管理后台，用于查看预约记录、维护服务价格和营业时间。</span></div>
+        <div class="row"><b>Admin UI</b><span>轻量管理后台，负责查看预约记录、维护服务价格和营业时间。</span></div>
       </div>
     </div>
   </section>
@@ -898,8 +898,8 @@
         <div class="tech-item"><b>DeepSeek / RAG</b><span>用于对话理解、发型推荐生成，以及知识库检索后的语义重排。</span></div>
         <div class="tech-item"><b>FastAPI</b><span>统一 HTTP 入口、预约业务分发、管理后台接口和友好错误响应。</span></div>
         <div class="tech-item"><b>SQLite</b><span>保存预约、服务价格、营业规则、设计师和可预约时段。</span></div>
-        <div class="tech-item"><b>HTML / CSS / JS</b><span>实现轻量后台和项目展示页，无前端框架也能完整演示。</span></div>
-        <div class="tech-item"><b>Nginx / Ubuntu</b><span>部署 Dify、FastAPI 后端和静态展示页，形成公网可访问 Demo。</span></div>
+        <div class="tech-item"><b>HTML / CSS / JS</b><span>实现轻量后台和项目介绍页，无前端框架也能完成完整交互。</span></div>
+        <div class="tech-item"><b>Nginx / Ubuntu</b><span>部署 Dify、FastAPI 后端和静态页面，形成公网可访问链路。</span></div>
         <div class="tech-item"><b>GitHub</b><span>公开仓库完成历史清理、运行产物忽略和敏感信息检查。</span></div>
         <div class="tech-item"><b>Prompt Engineering</b><span>将预约口语表达转成可执行字段，并控制追问顺序和兜底话术。</span></div>
       </div>
@@ -942,7 +942,7 @@
       <div class="section-head reveal">
         <div class="section-kicker">Demo Evidence</div>
         <h2>可现场验证的业务结果</h2>
-        <p>对话结果可以和后台数据相互印证，用于验证这套预约系统是否真正跑通，而不只是停留在静态说明页面。</p>
+        <p>对话结果和后台数据相互印证，能够反映预约系统的真实业务状态，而不是停留在静态说明页面。</p>
       </div>
       <div class="proof-grid reveal-stagger">
         <div class="proof-card">
