@@ -944,25 +944,30 @@
         <h2>可现场验证的业务结果</h2>
         <p>对话结果和后台数据相互印证，能够反映预约系统的真实业务状态，而不是停留在静态说明页面。</p>
       </div>
-      <div class="proof-grid reveal-stagger">
-        <div class="proof-card">
-          <span class="label">预约落库</span>
-          <h3>对话创建真实记录</h3>
-          <p>用户补齐姓名、手机号、门店、服务和时间后，后端创建预约记录，管理后台可直接查看。</p>
+        <div class="proof-grid reveal-stagger">
+          <div class="proof-card">
+            <span class="label">预约落库</span>
+            <h3>对话创建真实记录</h3>
+            <p>用户补齐姓名、手机号、门店、服务和时间后，后端创建预约记录，管理后台可直接查看。</p>
         </div>
         <div class="proof-card">
           <span class="label">价格同步</span>
           <h3>后台数据影响 AI 回复</h3>
           <p>服务价格从后端接口读取，后台调整服务项目后，价格查询链路会返回最新结果。</p>
         </div>
-        <div class="proof-card">
-          <span class="label">异常兜底</span>
-          <h3>业务失败也有明确状态</h3>
-          <p>预约冲突、非营业时间、节假日或记录不存在时，系统返回可解释的业务提示，而不是泛化回答。</p>
+          <div class="proof-card">
+            <span class="label">异常兜底</span>
+            <h3>业务失败也有明确状态</h3>
+            <p>预约冲突、非营业时间、节假日或记录不存在时，系统返回可解释的业务提示，而不是泛化回答。</p>
+          </div>
+          <div class="proof-card">
+            <span class="label">工程化补强</span>
+            <h3>后台接口与回归测试补齐</h3>
+            <p>管理接口增加 Bearer Token 鉴权，未配置时默认禁用；同时补充自动化测试，覆盖核心预约链路和后台接口访问控制。</p>
+          </div>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
   <section class="final">
     <div class="wrap final-box reveal">
