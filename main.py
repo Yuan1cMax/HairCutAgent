@@ -353,10 +353,7 @@ def startup() -> None:
         # 自动补全未来14天的 slots（每次启动都检查）
         today = datetime.now()
         designers_all = conn.execute("SELECT id FROM designers WHERE status = 'active'").fetchall()
-        times = ["09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-                 "13:00", "13:30", "14:00", "14:30", "15:00", "15:30",
-                 "16:00", "16:30", "17:00", "17:30", "18:00", "18:30",
-                 "19:00", "19:30", "20:00"]
+        times = get_slots_for_business_hours()
         for day_offset in range(14):
             date = (today + timedelta(days=day_offset)).strftime("%Y-%m-%d")
             for designer in designers_all:

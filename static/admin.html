@@ -291,6 +291,40 @@
     .message.success { background: #dcfce7; color: var(--success); }
     .message.error { background: #fee2e2; color: var(--danger); }
 
+    .auth-panel {
+      background: var(--panel);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px 18px;
+      margin-bottom: 18px;
+    }
+
+    .auth-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .auth-row label {
+      min-width: 92px;
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .auth-row input {
+      flex: 1 1 260px;
+      min-width: 220px;
+    }
+
+    .auth-hint {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
     .empty {
       color: var(--muted);
       text-align: center;
@@ -361,6 +395,16 @@
       </section>
 
       <div id="message" class="message"></div>
+
+      <section class="auth-panel">
+        <div class="auth-row">
+          <label for="adminTokenInput">Admin Token</label>
+          <input id="adminTokenInput" type="password" placeholder="请输入 ADMIN_TOKEN" autocomplete="off" />
+          <button class="secondary" id="saveTokenBtn" type="button">保存 Token</button>
+          <button class="secondary" id="clearTokenBtn" type="button">清除</button>
+        </div>
+        <div class="auth-hint">管理接口现在需要 Bearer Token。Token 只保存在当前浏览器本地，不会写入数据库。</div>
+      </section>
 
       <section id="designers" class="module active">
         <div class="module-top">
@@ -498,6 +542,29 @@
     const modalForm = $("#modalForm");
     const modalTitle = $("#modalTitle");
     const messageEl = $("#message");
+    const adminTokenInput = $("#adminTokenInput");
+    const TOKEN_STORAGE_KEY = "haircutagent_admin_token";
+
+    function getAdminToken() {
+      return (localStorage.getItem(TOKEN_STORAGE_KEY) || "").trim();
+    }
+
+    function saveAdminToken() {
+      const token = adminTokenInput.value.trim();
+      if (!token) {
+        showMessage("Token 不能为空", "error");
+        return;
+      }
+      localStorage.setItem(TOKEN_STORAGE_KEY, token);
+      adminTokenInput.value = token;
+      showMessage("Admin Token 已保存");
+    }
+
+    function clearAdminToken() {
+      localStorage.removeItem(TOKEN_STORAGE_KEY);
+      adminTokenInput.value = "";
+      showMessage("Admin Token 已清除");
+    }
 
     function showMessage(text, type = "success") {
       messageEl.textContent = text;
@@ -519,9 +586,11 @@
     }
 
     async function request(url, options = {}) {
+      const token = getAdminToken();
       const response = await fetch(url, {
         headers: {
           "Content-Type": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
           ...(options.headers || {})
         },
         ...options
@@ -535,6 +604,15 @@
       }
 
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error("缺少 Admin Token，请先在页面顶部保存 Token");
+        }
+        if (response.status === 403) {
+          throw new Error("Admin Token 无效，请检查后重新保存");
+        }
+        if (response.status === 503) {
+          throw new Error("服务端未配置 ADMIN_TOKEN，管理接口当前被禁用");
+        }
         throw new Error(data.detail || data.message || "请求失败");
       }
       return data;
@@ -913,6 +991,12 @@
     $("#saveModalBtn").addEventListener("click", saveModal);
     $("#refreshAllBtn").addEventListener("click", refreshAll);
     $("#bookingFilterBtn").addEventListener("click", loadBookings);
+    $("#saveTokenBtn").addEventListener("click", saveAdminToken);
+    $("#clearTokenBtn").addEventListener("click", clearAdminToken);
+    adminTokenInput.value = getAdminToken();
+    adminTokenInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") saveAdminToken();
+    });
     modalOverlay.addEventListener("click", (event) => {
       if (event.target === modalOverlay) closeModal();
     });
