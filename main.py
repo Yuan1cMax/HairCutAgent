@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -20,6 +21,13 @@ from database import get_db
 
 
 app = FastAPI(title="理发店预约系统")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
 
@@ -43,7 +51,7 @@ DEFAULT_HOLIDAYS = [
     "2026-10-02",
     "2026-10-03",
 ]
-DEFAULT_REST_DAYS = [0]
+DEFAULT_REST_DAYS = []
 DEFAULT_STORE_NAME = "西湖店"
 DEFAULT_SLOT_TIMES = [
     "09:00",
@@ -179,6 +187,47 @@ def get_slots_for_business_hours(store_name: Optional[str] = None) -> list[str]:
         slots.append(slot)
         current += 30
     return slots
+
+
+def get_alternative_slots(
+    date: str,
+    store_name: Optional[str] = None,
+    exclude_time: Optional[str] = None,
+    limit: int = 5,
+) -> list[dict[str, Any]]:
+    with get_db() as conn:
+        rows = conn.execute(
+            """
+            SELECT
+                s.time,
+                d.id AS designer_id,
+                d.name AS designer_name
+            FROM slots s
+            JOIN designers d ON s.designer_id = d.id
+            WHERE s.date = ?
+              AND s.is_booked = 0
+              AND d.status = 'active'
+              AND d.is_available = 1
+              AND (? IS NULL OR s.time <> ?)
+            ORDER BY s.time, d.name
+            """,
+            (date, exclude_time, exclude_time),
+        ).fetchall()
+
+    alternatives: list[dict[str, Any]] = []
+    for row in rows:
+        alternatives.append(
+            {
+                "date": date,
+                "time": row["time"],
+                "designer_id": row["designer_id"],
+                "designer_name": row["designer_name"],
+                "store": store_name or DEFAULT_STORE_NAME,
+            }
+        )
+        if len(alternatives) >= limit:
+            break
+    return alternatives
 
 
 def ensure_column(cursor: sqlite3.Cursor, table: str, column: str, definition: str) -> None:
@@ -457,6 +506,7 @@ def get_available_slots(date: str, designer_id: Optional[int] = None):
 
     return {
         "status": "available_slots",
+        "action": "query_availability",
         "date": date,
         "slots": [dict(slot) for slot in slots],
     }
@@ -491,9 +541,21 @@ def create_booking(booking: BookingCreate):
             return {"status": "error", "message": "该时段不存在，请换个时间试试"}
 
         if slot["is_booked"] == 1:
+            alternatives = get_alternative_slots(
+                booking.date,
+                store_name=booking.store,
+                exclude_time=booking.time,
+            )
             return {
                 "status": "conflict",
                 "message": "该时段已被预约，请选择其他时间或设计师",
+                "date": booking.date,
+                "time": booking.time,
+                "store": booking.store,
+                "service": booking.service,
+                "customer_name": booking.customer_name,
+                "customer_phone": booking.customer_phone,
+                "slots": alternatives,
             }
 
         cursor.execute("UPDATE slots SET is_booked = 1 WHERE id = ?", (slot["id"],))
@@ -524,8 +586,11 @@ def create_booking(booking: BookingCreate):
 
     return {
         "status": "success",
+        "action": "create",
         "booking_id": booking_id,
         "designer_name": designer["name"],
+        "customer_name": booking.customer_name,
+        "customer_phone": booking.customer_phone,
         "date": booking.date,
         "time": booking.time,
         "service": booking.service,
@@ -559,7 +624,22 @@ def reschedule_booking(req: BookingReschedule):
             raise HTTPException(status_code=404, detail="新时段不存在")
 
         if new_slot["is_booked"] == 1:
-            return {"status": "conflict", "message": "新时段已被占用，请选择其他时间"}
+            alternatives = get_alternative_slots(
+                req.new_date,
+                store_name=booking["store"],
+                exclude_time=req.new_time,
+            )
+            return {
+                "status": "conflict",
+                "message": "新时段已被占用，请选择其他时间",
+                "date": req.new_date,
+                "time": req.new_time,
+                "store": booking["store"],
+                "service": booking["service"],
+                "customer_name": booking["customer_name"],
+                "customer_phone": booking["customer_phone"],
+                "slots": alternatives,
+            }
 
         cursor.execute("UPDATE slots SET is_booked = 0 WHERE id = ?", (booking["slot_id"],))
         cursor.execute("UPDATE slots SET is_booked = 1 WHERE id = ?", (new_slot["id"],))
@@ -571,6 +651,7 @@ def reschedule_booking(req: BookingReschedule):
 
     return {
         "status": "success",
+        "action": "reschedule",
         "booking_id": req.booking_id,
         "new_date": req.new_date,
         "new_time": req.new_time,
@@ -592,7 +673,12 @@ def cancel_booking(booking_id: int):
         cursor.execute("UPDATE slots SET is_booked = 0 WHERE id = ?", (booking["slot_id"],))
         cursor.execute("UPDATE bookings SET status = 'cancelled' WHERE id = ?", (booking_id,))
         conn.commit()
-    return {"status": "success", "booking_id": booking_id, "message": "预约已取消"}
+    return {
+        "status": "success",
+        "action": "cancel",
+        "booking_id": booking_id,
+        "message": "预约已取消",
+    }
 
 
 def cancel_by_phone_and_date(phone: str, date: str):
@@ -626,6 +712,7 @@ def cancel_by_phone_and_date(phone: str, date: str):
         conn.commit()
     return {
         "status": "success",
+        "action": "cancel",
         "booking_id": booking["id"],
         "message": f"已取消 {booking['date']} {booking['time']} 的预约",
     }
@@ -667,6 +754,7 @@ def cancel_by_reference(reference: str):
         conn.commit()
     return {
         "status": "success",
+        "action": "cancel",
         "booking_id": booking["id"],
         "message": f"已取消 {booking['date']} {booking['time']} 的预约",
     }
@@ -708,6 +796,7 @@ def cancel_by_phone(phone: str):
         conn.commit()
     return {
         "status": "success",
+        "action": "cancel",
         "booking_id": booking["id"],
         "message": f"已取消 {booking['date']} {booking['time']} 的预约",
     }
@@ -727,6 +816,27 @@ def get_designers():
     return {"designers": [dict(designer) for designer in designers]}
 
 
+@app.get("/designers/overview")
+def get_designers_overview():
+    with get_db() as conn:
+        designers = conn.execute(
+            """
+            SELECT id, name, specialty, status, is_available
+            FROM designers
+            WHERE status = 'active'
+            ORDER BY is_available DESC, id ASC
+            """
+        ).fetchall()
+
+    items = []
+    for designer in designers:
+        item = dict(designer)
+        item["availability_label"] = "可预约" if item["is_available"] else "暂不可约"
+        items.append(item)
+
+    return {"items": items}
+
+
 
 def query_booking(phone: Optional[str] = None, booking_reference: Optional[str] = None):
     with get_db() as conn:
@@ -734,7 +844,20 @@ def query_booking(phone: Optional[str] = None, booking_reference: Optional[str] 
 
         if booking_reference:
             ref_str = str(booking_reference).strip()
-            if ref_str.isdigit():
+            if ref_str.isdigit() and len(ref_str) == 4:
+                booking = conn.execute(
+                    """
+                    SELECT b.*, d.name AS designer_name
+                    FROM bookings b
+                    LEFT JOIN designers d ON b.designer_id = d.id
+                    WHERE b.customer_phone LIKE ? AND b.status = 'active'
+                    ORDER BY b.id DESC
+                    LIMIT 1
+                    """,
+                    (f"%{ref_str}",),
+                ).fetchone()
+
+            if not booking and ref_str.isdigit():
                 booking = conn.execute(
                     """
                     SELECT b.*, d.name AS designer_name
@@ -775,6 +898,7 @@ def query_booking(phone: Optional[str] = None, booking_reference: Optional[str] 
     if not booking:
         return {
             "status": "not_found",
+            "action": "query_booking",
             "message": "未找到匹配的预约记录，请核对手机号或预约单号。"
         }
 
@@ -806,7 +930,7 @@ def dispatch(req: dict):
     service = req.get("service")
     booking_reference = req.get("booking_reference")
 
-    if action in ("create", "reschedule") and date:
+    if action in ("create", "reschedule", "precheck_booking") and date:
         config = get_business_config(store)
         if is_holiday(date, store) or is_rest_day(date, store):
             day_name = "节假日" if is_holiday(date, store) else "休息日"
@@ -834,6 +958,13 @@ def dispatch(req: dict):
                     "start": config["break_start"],
                     "end": config["break_end"],
                 },
+            }
+
+        if action == "precheck_booking":
+            return {
+                "status": "ok",
+                "action": "precheck_booking",
+                "message": "该日期和时间可以继续预约。",
             }
 
     designer_name = req.get("designer")
@@ -1224,12 +1355,28 @@ if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
+@app.get("/", include_in_schema=False)
+def landing_page():
+    index_file = BASE_DIR / "index.html"
+    if not index_file.exists():
+        raise HTTPException(status_code=404, detail="index.html not found")
+    return FileResponse(index_file)
+
+
 @app.get("/admin", include_in_schema=False)
 def admin_page():
     admin_file = STATIC_DIR / "admin.html"
     if not admin_file.exists():
         raise HTTPException(status_code=404, detail="admin.html not found")
     return FileResponse(admin_file)
+
+
+@app.get("/experience", include_in_schema=False)
+def experience_page():
+    experience_file = STATIC_DIR / "experience.html"
+    if not experience_file.exists():
+        raise HTTPException(status_code=404, detail="experience.html not found")
+    return FileResponse(experience_file)
 
 
 if __name__ == "__main__":

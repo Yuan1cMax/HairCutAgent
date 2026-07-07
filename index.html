@@ -555,7 +555,9 @@
 (function(){
   "use strict";
 
-  const DEMO_URL = "http://101.43.56.2:81/chat/bYTeuVxsoCc5nXcS";
+  const DIFY_URL = "http://101.43.56.2:81/chat/XEllsN3sDNHrk0xC";
+  const EXPERIENCE_URL = "http://101.43.56.2:8003/experience";
+  const ADMIN_URL = "http://101.43.56.2:8003/admin";
   const GITHUB_URL = "https://github.com/Yuan1cMax/HairCutAgent";
 
   /* ── Helpers ── */
@@ -569,13 +571,21 @@
   /* ── Demo / GitHub links ── */
   function wireLinks(){
     qa("[data-demo-link]").forEach(el => {
-      if (DEMO_URL) { el.href = DEMO_URL; return; }
+      if (EXPERIENCE_URL) { el.href = EXPERIENCE_URL; return; }
       el.removeAttribute("href");
       el.setAttribute("aria-disabled","true");
-      el.title = "Demo 链接待接入";
+      el.title = "体验页链接待接入";
+      el.addEventListener("click", e => e.preventDefault());
+    });
+    qa("[data-experience-link]").forEach(el => {
+      if (DIFY_URL) { el.href = DIFY_URL; return; }
+      el.removeAttribute("href");
+      el.setAttribute("aria-disabled","true");
+      el.title = "Dify 对话页链接待接入";
       el.addEventListener("click", e => e.preventDefault());
     });
     qa("[data-github-link]").forEach(el => { el.href = GITHUB_URL; });
+    qa("[data-admin-link]").forEach(el => { el.href = ADMIN_URL; });
   }
 
   /* ── Scroll Progress ── */
@@ -802,17 +812,19 @@
   <section class="hero">
     <div class="wrap hero-grid">
       <div>
-        <div class="eyebrow">Dify Agent + FastAPI + SQLite</div>
+        <div class="eyebrow">Dify Agent + FastAPI + SQLite + Frontend UX</div>
         <h1>理发店智能预约助手</h1>
-        <p class="hero-copy">HairCutAgent 面向门店预约场景，支持用户通过自然语言完成预约、改期、取消、价格查询和发型咨询，后台同步维护服务价格、营业规则和预约记录。</p>
+        <p class="hero-copy">HairCutAgent 面向门店预约场景，支持用户通过自然语言完成预约、改期、取消、价格查询和发型咨询，并补齐了独立用户体验页、轻量管理后台和公网演示链路，形成从对话到状态同步的全栈闭环。</p>
         <div class="cta-row">
           <a class="btn btn-primary" data-demo-link target="_blank" rel="noopener">立即体验 Demo →</a>
+          <a class="btn btn-secondary" data-experience-link target="_blank" rel="noopener">查看原始 Dify 对话页</a>
+          <a class="btn btn-secondary" data-admin-link target="_blank" rel="noopener">查看管理后台</a>
           <a class="btn btn-secondary" data-github-link target="_blank" rel="noopener">查看 GitHub 仓库</a>
         </div>
         <div class="meta">
           <div class="meta-card"><strong>7 类</strong><span>意图路由</span></div>
           <div class="meta-card"><strong>6 项</strong><span>发型推荐 Slot</span></div>
-          <div class="meta-card"><strong>4 模块</strong><span>轻量管理后台</span></div>
+          <div class="meta-card"><strong>3 端</strong><span>用户页 / 管理台 / Dify</span></div>
         </div>
       </div>
       <div class="demo-panel" aria-label="预约对话示例">
@@ -839,15 +851,16 @@
       <div class="section-head reveal">
         <div class="section-kicker">What it solves</div>
         <h2>从"聊天"推进到"可执行预约"</h2>
-        <p>项目重点不是生成一段客服话术，而是把自然语言输入转成确定性的业务动作，并让结果进入同一套预约数据。</p>
+        <p>项目重点不是生成一段客服话术，而是把自然语言输入转成确定性的业务动作，并让结果进入同一套预约数据，再同步反馈到用户页和管理后台。</p>
       </div>
       <div class="cards reveal-stagger">
         <div class="card"><h3>多轮预约补齐</h3><p>识别用户意图后提取姓名、手机号、门店、服务、日期和时间，缺失字段按优先级追问。</p></div>
         <div class="card"><h3>预约生命周期</h3><p>支持创建预约、改期、取消、查询已有预约，并对不存在记录返回明确业务提示。</p></div>
         <div class="card"><h3>实时价格查询</h3><p>服务项目和价格来自后端数据表，后台调整后，AI 查询结果同步变化。</p></div>
         <div class="card"><h3>营业规则校验</h3><p>支持门店营业时间、午休、休息日和节假日校验，避免无效预约进入数据库。</p></div>
-        <div class="card"><h3>发型推荐</h3><p>按性别、脸型、发质、长度、风格和打理成本收集条件，再进入知识库检索与推荐生成。</p></div>
-        <div class="card"><h3>轻量后台</h3><p>提供设计师、服务项目、营业时间和预约记录管理，前后台数据保持同步。</p></div>
+        <div class="card"><h3>发型推荐</h3><p>按性别、脸型、发质、长度、风格和打理成本逐步补齐条件，再进入知识库检索与推荐生成，适合继续打磨成更完整的咨询链路。</p></div>
+        <div class="card"><h3>前端交互页</h3><p>独立用户体验页承接 Dify 对话入口、设计师状态展示和预约结果查询，并兼顾桌面端与手机端浏览。</p></div>
+        <div class="card"><h3>后台联动</h3><p>提供设计师、服务项目、营业时间和预约记录管理；设计师可预约状态调整后，前端展示页可实时同步。</p></div>
       </div>
     </div>
   </section>
@@ -874,13 +887,14 @@
     <div class="wrap split">
       <div class="section-head reveal">
         <div class="section-kicker">Architecture</div>
-        <h2>AI 负责理解，后端负责状态</h2>
-        <p>Dify 处理自然语言理解、Slot 补齐和回复生成；FastAPI 处理确定性的数据库查询、预约冲突检测和营业规则校验。</p>
+        <h2>AI 负责理解，后端负责状态，前端负责体验</h2>
+        <p>Dify 处理自然语言理解、Slot 补齐和回复生成；FastAPI 处理确定性的数据库查询、预约冲突检测和营业规则校验；前端体验页负责把状态变化展示给真实用户。</p>
       </div>
       <div class="table reveal">
         <div class="row"><b>Dify</b><span>Advanced Chat Workflow、意图分类、多轮参数提取、RAG 发型推荐、回复生成。</span></div>
         <div class="row"><b>FastAPI</b><span>`/dispatch` 统一入口，分发预约、改期、取消、查询和后台管理接口。</span></div>
         <div class="row"><b>SQLite</b><span>保存 designers、services、business_hours、slots、bookings 等核心业务表。</span></div>
+        <div class="row"><b>Experience UI</b><span>独立用户体验页内嵌 Dify 对话，同时展示设计师状态、预约查询入口和移动端适配结果。</span></div>
         <div class="row"><b>Admin UI</b><span>轻量管理后台，负责查看预约记录、维护服务价格和营业时间。</span></div>
       </div>
     </div>
@@ -891,14 +905,14 @@
       <div class="section-head reveal">
         <div class="section-kicker">Tech Stack</div>
         <h2>技术栈不只停留在 Dify</h2>
-        <p>项目把工作流编排、后端接口、数据库状态和管理后台串起来，形成一个可验证的业务闭环。</p>
+        <p>项目把工作流编排、后端接口、数据库状态、用户前端和管理后台串起来，形成一个可验证、可演示、可公网访问的业务闭环。</p>
       </div>
       <div class="tech-grid reveal-stagger">
         <div class="tech-item"><b>Dify Advanced Chat</b><span>意图分类、参数提取、多轮追问、异常分支和回复生成。</span></div>
         <div class="tech-item"><b>DeepSeek / RAG</b><span>用于对话理解、发型推荐生成，以及知识库检索后的语义重排。</span></div>
         <div class="tech-item"><b>FastAPI</b><span>统一 HTTP 入口、预约业务分发、管理后台接口和友好错误响应。</span></div>
         <div class="tech-item"><b>SQLite</b><span>保存预约、服务价格、营业规则、设计师和可预约时段。</span></div>
-        <div class="tech-item"><b>HTML / CSS / JS</b><span>实现轻量后台和项目介绍页，无前端框架也能完成完整交互。</span></div>
+        <div class="tech-item"><b>HTML / CSS / JS</b><span>实现项目展示页、用户体验页和轻量后台，并补齐预约结果查询、状态同步与移动端适配。</span></div>
         <div class="tech-item"><b>Nginx / Ubuntu</b><span>部署 Dify、FastAPI 后端和静态页面，形成公网可访问链路。</span></div>
         <div class="tech-item"><b>GitHub</b><span>公开仓库完成历史清理、运行产物忽略和敏感信息检查。</span></div>
         <div class="tech-item"><b>Prompt Engineering</b><span>将预约口语表达转成可执行字段，并控制追问顺序和兜底话术。</span></div>
@@ -942,7 +956,7 @@
       <div class="section-head reveal">
         <div class="section-kicker">Demo Evidence</div>
         <h2>可现场验证的业务结果</h2>
-        <p>对话结果和后台数据相互印证，能够反映预约系统的真实业务状态，而不是停留在静态说明页面。</p>
+        <p>对话结果、前端展示和后台数据相互印证，能够反映预约系统的真实业务状态，而不是停留在静态说明页面。</p>
       </div>
         <div class="proof-grid reveal-stagger">
           <div class="proof-card">
@@ -950,10 +964,15 @@
             <h3>对话创建真实记录</h3>
             <p>用户补齐姓名、手机号、门店、服务和时间后，后端创建预约记录，管理后台可直接查看。</p>
         </div>
+          <div class="proof-card">
+            <span class="label">价格同步</span>
+            <h3>后台数据影响 AI 回复</h3>
+            <p>服务价格从后端接口读取，后台调整服务项目后，价格查询链路会返回最新结果。</p>
+        </div>
         <div class="proof-card">
-          <span class="label">价格同步</span>
-          <h3>后台数据影响 AI 回复</h3>
-          <p>服务价格从后端接口读取，后台调整服务项目后，价格查询链路会返回最新结果。</p>
+          <span class="label">前端联动</span>
+          <h3>管理后台改动可同步到用户页</h3>
+          <p>在管理后台切换设计师可预约状态后，用户体验页的设计师列表会刷新展示最新状态，证明前后端数据共用同一套来源。</p>
         </div>
           <div class="proof-card">
             <span class="label">异常兜底</span>
@@ -962,8 +981,8 @@
           </div>
           <div class="proof-card">
             <span class="label">工程化补强</span>
-            <h3>后台接口与回归测试补齐</h3>
-            <p>管理接口增加 Bearer Token 鉴权，未配置时默认禁用；同时补充自动化测试，覆盖核心预约链路和后台接口访问控制。</p>
+            <h3>后台接口与管理鉴权补齐</h3>
+            <p>管理接口增加 Bearer Token 鉴权，并在服务器启动脚本中固化 ADMIN_TOKEN，避免服务重启后后台再次被禁用。</p>
           </div>
         </div>
       </div>
@@ -973,10 +992,12 @@
     <div class="wrap final-box reveal">
       <div>
         <h2>体验 HairCutAgent</h2>
-        <p>可直接体验预约与价格查询链路，也可以查看 GitHub 仓库了解后端实现和管理后台代码。</p>
+        <p>可直接体验预约与价格查询链路，也可以查看独立用户体验页、管理后台和 GitHub 仓库，完整理解这套全栈闭环是如何串起来的。</p>
       </div>
       <div class="cta-row">
         <a class="btn btn-primary" data-demo-link target="_blank" rel="noopener">立即体验 Demo →</a>
+        <a class="btn btn-secondary" data-experience-link target="_blank" rel="noopener">原始 Dify 对话页</a>
+        <a class="btn btn-secondary" data-admin-link target="_blank" rel="noopener">管理后台</a>
         <a class="btn btn-secondary" data-github-link target="_blank" rel="noopener">GitHub 仓库</a>
       </div>
     </div>

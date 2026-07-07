@@ -324,6 +324,22 @@
       font-size: 12px;
       line-height: 1.6;
     }
+    .auth-status {
+      margin-top: 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: #eef4ff;
+      color: #1d4ed8;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .auth-status.off {
+      background: #fff1f2;
+      color: #be123c;
+    }
 
     .empty {
       color: var(--muted);
@@ -404,6 +420,7 @@
           <button class="secondary" id="clearTokenBtn" type="button">清除</button>
         </div>
         <div class="auth-hint">管理接口现在需要 Bearer Token。Token 只保存在当前浏览器本地，不会写入数据库。</div>
+        <div id="authStatus" class="auth-status off">未保存 Token，当前无法访问管理接口</div>
       </section>
 
       <section id="designers" class="module active">
@@ -543,10 +560,22 @@
     const modalTitle = $("#modalTitle");
     const messageEl = $("#message");
     const adminTokenInput = $("#adminTokenInput");
+    const authStatus = $("#authStatus");
     const TOKEN_STORAGE_KEY = "haircutagent_admin_token";
 
     function getAdminToken() {
       return (localStorage.getItem(TOKEN_STORAGE_KEY) || "").trim();
+    }
+
+    function updateAuthStatus() {
+      const token = getAdminToken();
+      if (token) {
+        authStatus.className = "auth-status";
+        authStatus.textContent = "Token 已保存到当前浏览器，本页刷新后仍可直接访问后台接口";
+      } else {
+        authStatus.className = "auth-status off";
+        authStatus.textContent = "未保存 Token，当前无法访问管理接口";
+      }
     }
 
     function saveAdminToken() {
@@ -557,12 +586,14 @@
       }
       localStorage.setItem(TOKEN_STORAGE_KEY, token);
       adminTokenInput.value = token;
+      updateAuthStatus();
       showMessage("Admin Token 已保存");
     }
 
     function clearAdminToken() {
       localStorage.removeItem(TOKEN_STORAGE_KEY);
       adminTokenInput.value = "";
+      updateAuthStatus();
       showMessage("Admin Token 已清除");
     }
 
@@ -994,6 +1025,7 @@
     $("#saveTokenBtn").addEventListener("click", saveAdminToken);
     $("#clearTokenBtn").addEventListener("click", clearAdminToken);
     adminTokenInput.value = getAdminToken();
+    updateAuthStatus();
     adminTokenInput.addEventListener("keydown", (event) => {
       if (event.key === "Enter") saveAdminToken();
     });

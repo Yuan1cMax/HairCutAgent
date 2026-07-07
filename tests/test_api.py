@@ -10,11 +10,8 @@ import pytest
 
 # ── 辅助函数 ────────────────────────────────────────────
 def _weekday_date(offset_days: int = 3) -> str:
-    """返回 offset_days 后的日期；避开周一（weekly_off=[0]）"""
-    d = datetime.now() + timedelta(days=offset_days)
-    while d.weekday() == 0:  # 0=周一，跳过
-        d += timedelta(days=1)
-    return d.strftime("%Y-%m-%d")
+    """返回 offset_days 后的日期"""
+    return (datetime.now() + timedelta(days=offset_days)).strftime("%Y-%m-%d")
 
 
 class TestPublicEndpoints:
@@ -27,6 +24,20 @@ class TestPublicEndpoints:
         assert "designers" in data
         assert len(data["designers"]) >= 1
         assert data["designers"][0]["name"] == "测试发型师小王"
+
+    def test_get_designers_overview(self, client):
+        resp = client.get("/designers/overview")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "items" in data
+        assert len(data["items"]) >= 1
+        assert "availability_label" in data["items"][0]
+
+    def test_experience_page(self, client):
+        resp = client.get("/experience")
+        assert resp.status_code == 200
+        assert "text/html" in resp.headers["content-type"]
+        assert "在线预约理发" in resp.text
 
     def test_get_available_slots(self, client):
         date = _weekday_date(5)
@@ -51,6 +62,7 @@ class TestPublicEndpoints:
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "success", f"Failed: {data}"
+        assert data["action"] == "create"
         assert data["booking_id"] > 0
         assert "预约成功" in data["message"]
 
@@ -103,6 +115,7 @@ class TestPublicEndpoints:
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "success"
+        assert data["action"] == "query_booking"
         assert data["booking"]["customer_name"] == "查询测试"
 
     def test_cancel_booking(self, client):
@@ -121,6 +134,7 @@ class TestPublicEndpoints:
         r2 = client.delete(f"/booking/cancel?booking_id={booking_id}")
         assert r2.status_code == 200
         assert r2.json()["status"] == "success"
+        assert r2.json()["action"] == "cancel"
         assert "已取消" in r2.json()["message"]
 
     def test_reschedule_booking(self, client):
@@ -144,6 +158,7 @@ class TestPublicEndpoints:
         })
         assert r2.status_code == 200
         assert r2.json()["status"] == "success"
+        assert r2.json()["action"] == "reschedule"
         assert "改期成功" in r2.json()["message"]
 
     def test_dispatch_holiday_reject(self, client):
