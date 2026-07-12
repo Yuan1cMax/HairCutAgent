@@ -861,6 +861,7 @@
         <div class="card"><h3>发型推荐</h3><p>按性别、脸型、发质、长度、风格和打理成本逐步补齐条件，再进入知识库检索与推荐生成，适合继续打磨成更完整的咨询链路。</p></div>
         <div class="card"><h3>前端交互页</h3><p>独立用户体验页承接 Dify 对话入口、设计师状态展示和预约结果查询，并兼顾桌面端与手机端浏览。</p></div>
         <div class="card"><h3>后台联动</h3><p>提供设计师、服务项目、营业时间和预约记录管理；设计师可预约状态调整后，前端展示页可实时同步。</p></div>
+        <div class="card"><h3>只读 MCP 适配</h3><p>通过 MCP 暴露服务项目、门店营业规则和可预约时段，让外部 AI 客户端读取同一份实时业务状态；不开放写操作。</p></div>
       </div>
     </div>
   </section>
@@ -894,6 +895,7 @@
         <div class="row"><b>Dify</b><span>Advanced Chat Workflow、意图分类、多轮参数提取、RAG 发型推荐、回复生成。</span></div>
         <div class="row"><b>FastAPI</b><span>`/dispatch` 统一入口，分发预约、改期、取消、查询和后台管理接口。</span></div>
         <div class="row"><b>SQLite</b><span>保存 designers、services、business_hours、slots、bookings 等核心业务表。</span></div>
+        <div class="row"><b>MCP</b><span>以只读工具方式复用同一 SQLite 数据源，提供服务、营业规则和可预约时段查询。</span></div>
         <div class="row"><b>Experience UI</b><span>独立用户体验页内嵌 Dify 对话，同时展示设计师状态、预约查询入口和移动端适配结果。</span></div>
         <div class="row"><b>Admin UI</b><span>轻量管理后台，负责查看预约记录、维护服务价格和营业时间。</span></div>
       </div>
@@ -912,6 +914,7 @@
         <div class="tech-item"><b>DeepSeek / RAG</b><span>用于对话理解、发型推荐生成，以及知识库检索后的语义重排。</span></div>
         <div class="tech-item"><b>FastAPI</b><span>统一 HTTP 入口、预约业务分发、管理后台接口和友好错误响应。</span></div>
         <div class="tech-item"><b>SQLite</b><span>保存预约、服务价格、营业规则、设计师和可预约时段。</span></div>
+        <div class="tech-item"><b>Python MCP SDK</b><span>提供 stdio 和 Streamable HTTP 两种接入方式，暴露 3 个只读业务查询工具，不介入预约写操作。</span></div>
         <div class="tech-item"><b>HTML / CSS / JS</b><span>实现项目展示页、用户体验页和轻量后台，并补齐预约结果查询、状态同步与移动端适配。</span></div>
         <div class="tech-item"><b>Nginx / Ubuntu</b><span>部署 Dify、FastAPI 后端和静态页面，形成公网可访问链路。</span></div>
         <div class="tech-item"><b>GitHub</b><span>公开仓库完成历史清理、运行产物忽略和敏感信息检查。</span></div>

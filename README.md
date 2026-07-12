@@ -152,3 +152,30 @@ FastAPI 后端负责把 Dify 的自然语言结果落成确定性的业务操作
 ## 公开展示说明
 
 这个仓库保留后端源码、公开展示版工作流 DSL 和展示页，但不包含真实线上密钥、真实手机号数据和不适合公开披露的部署细节。完整编排版 DSL 仅保留在本地自用，不进入公开仓库。
+
+## Read-only MCP adapter
+
+The repository includes a minimal MCP adapter in `mcp_server.py`. It exposes
+only read operations backed by the same SQLite database as the FastAPI service:
+
+- `list_services`: active services, prices, and durations
+- `get_business_hours`: store opening, break, weekly rest, and holiday rules
+- `get_available_slots`: current available slots and explicit closure status
+
+The adapter does not expose booking creation, rescheduling, cancellation, or
+admin tools. The model may request current facts, but the existing backend keeps
+control of all state-changing business operations.
+
+For a local MCP client, use the default stdio transport:
+
+```bash
+python mcp_server.py
+```
+
+For a server-side process, use the private Streamable HTTP transport on port
+8004. `start_mcp_server.sh` binds to `127.0.0.1` by default; put it behind an
+authenticated HTTPS reverse proxy before exposing it outside the server:
+
+```bash
+MCP_TRANSPORT=streamable-http ./start_mcp_server.sh
+```
