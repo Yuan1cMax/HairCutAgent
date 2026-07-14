@@ -797,6 +797,7 @@
   <div class="wrap nav-inner">
     <div class="brand"><span class="mark">H</span><span>HairCutAgent</span></div>
     <div class="nav-links">
+      <a href="http://101.43.56.2:8898">个人作品集</a>
       <a href="#features">功能</a>
       <a href="#workflow">流程</a>
       <a href="#architecture">架构</a>
@@ -985,7 +986,7 @@
           <div class="proof-card">
             <span class="label">工程化补强</span>
             <h3>后台接口与管理鉴权补齐</h3>
-            <p>管理接口增加 Bearer Token 鉴权，并在服务器启动脚本中固化 ADMIN_TOKEN，避免服务重启后后台再次被禁用。</p>
+            <p>管理接口增加 Bearer Token 鉴权，Token 从服务器私有环境加载，避免管理接口裸露或把敏感配置带入仓库。</p>
           </div>
         </div>
       </div>
@@ -998,6 +999,7 @@
         <p>可直接体验预约与价格查询链路，也可以查看独立用户体验页、管理后台和 GitHub 仓库，完整理解这套全栈闭环是如何串起来的。</p>
       </div>
       <div class="cta-row">
+        <a class="btn btn-secondary" href="http://101.43.56.2:8898">个人作品集</a>
         <a class="btn btn-primary" data-demo-link target="_blank" rel="noopener">立即体验 Demo →</a>
         <a class="btn btn-secondary" data-experience-link target="_blank" rel="noopener">原始 Dify 对话页</a>
         <a class="btn btn-secondary" data-admin-link target="_blank" rel="noopener">管理后台</a>
