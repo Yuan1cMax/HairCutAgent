@@ -5,10 +5,22 @@ HairCutAgent 是一个面向门店预约场景的 AI 业务系统展示项目，
 ## 项目地址
 
 - 个人作品集：`http://101.43.56.2:8898`
+- 在线简历：`http://101.43.56.2:8898/resume.html`
+- 简历 PDF：`http://101.43.56.2:8898/resume.pdf`
 - 项目展示页：`http://101.43.56.2:8899/`
 - 用户体验页：`http://101.43.56.2:8003/experience`
+- GitHub：`https://github.com/Yuan1cMax/HairCutAgent`
 - 管理后台：`http://101.43.56.2:8003/admin`（需要管理员 Token，不作为公开主入口）
 - 原始 Dify 对话页：通过展示页或用户体验页中的入口跳转
+
+## 项目结果速览
+
+- 完成预约、改期、取消、查询、价格咨询和发型推荐 6 类核心业务动作，并为冲突、闭店、休息日、节假日和记录不存在设计明确状态。
+- 支持 3 个门店，服务启动时自动补全未来 14 天可预约时段；Dify、体验页和管理后台共享同一 SQLite 数据源。
+- 发型推荐按性别、脸型、发质、长度、风格和打理成本 6 个维度收集条件，再进入知识库检索与重排。
+- 完成 48 项 pytest + TestClient 回归测试；只读 MCP 适配层提供服务、营业时间和可预约时段 3 个查询工具。
+
+建议优先查看：`README` 技术架构 → `main.py` 统一业务入口 → `tests/` 回归测试 → `mcp_server.py` 只读适配层 → 公开 Workflow DSL。
 
 ## 解决的问题
 
@@ -152,31 +164,32 @@ FastAPI 后端负责把 Dify 的自然语言结果落成确定性的业务操作
 
 ## 公开展示说明
 
-这个仓库保留后端源码、公开展示版工作流 DSL 和展示页，但不包含真实线上密钥、真实手机号数据和不适合公开披露的部署细节。完整编排版 DSL 仅保留在本地自用，不进入公开仓库。
+当前 `main` 分支保留后端源码、公开展示版 Workflow DSL 和展示页；`.env`、数据库、日志、真实业务数据及完整私有 Workflow DSL 均不进入 Git。管理 Token 只从服务器私有环境加载，公开代码不保留线上真实凭证。
 
-## Read-only MCP adapter
+## 只读 MCP 适配层
 
-The repository includes a minimal MCP adapter in `mcp_server.py`. It exposes
-only read operations backed by the same SQLite database as the FastAPI service:
+`mcp_server.py` 使用官方 Python MCP SDK，为外部 AI 客户端提供 3 个只读业务查询工具，并复用 FastAPI 服务使用的同一份 SQLite 数据：
 
-- `list_services`: active services, prices, and durations
-- `get_business_hours`: store opening, break, weekly rest, and holiday rules
-- `get_available_slots`: current available slots and explicit closure status
+- `list_services`：查询启用中的服务、价格和时长。
+- `get_business_hours`：查询营业时间、午休、每周休息日和节假日规则。
+- `get_available_slots`：查询实时可预约时段，并明确返回闭店状态。
 
-The adapter does not expose booking creation, rescheduling, cancellation, or
-admin tools. The model may request current facts, but the existing backend keeps
-control of all state-changing business operations.
+适配层不开放预约创建、改期、取消或后台管理等写操作，所有状态变更仍由现有 FastAPI 业务层控制。默认使用 stdio；服务器侧可使用仅绑定 `127.0.0.1:8004` 的 Streamable HTTP，不直接暴露公网。
 
-For a local MCP client, use the default stdio transport:
+本地 MCP 客户端可直接使用默认 stdio：
 
 ```bash
 python mcp_server.py
 ```
 
-For a server-side process, use the private Streamable HTTP transport on port
-8004. `start_mcp_server.sh` binds to `127.0.0.1` by default; put it behind an
-authenticated HTTPS reverse proxy before exposing it outside the server:
+服务器侧私有 Streamable HTTP：
 
 ```bash
 MCP_TRANSPORT=streamable-http ./start_mcp_server.sh
 ```
+
+## 实现边界
+
+- 预约主链路由 Dify Workflow 在意图识别和字段校验后固定调用 HTTP API，不描述为模型自主 Function Calling。
+- MCP 是后续增加的独立只读适配层，用于标准化读取实时业务状态，不替代原有预约写链路。
+- 本项目定位为可运行、可验证的 AI 业务系统原型，不虚构生产事故、生产流量或未实现的多 Agent 能力。

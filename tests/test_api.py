@@ -10,8 +10,12 @@ import pytest
 
 # ── 辅助函数 ────────────────────────────────────────────
 def _weekday_date(offset_days: int = 3) -> str:
-    """返回 offset_days 后的日期"""
-    return (datetime.now() + timedelta(days=offset_days)).strftime("%Y-%m-%d")
+    """返回测试配置中的下一个营业日，避免用例随运行日期漂移。"""
+    date = datetime.now() + timedelta(days=offset_days)
+    holidays = {"2026-01-01", "2026-05-01"}
+    while date.weekday() == 0 or date.strftime("%Y-%m-%d") in holidays:
+        date += timedelta(days=1)
+    return date.strftime("%Y-%m-%d")
 
 
 class TestPublicEndpoints:

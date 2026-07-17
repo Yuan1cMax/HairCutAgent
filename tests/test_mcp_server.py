@@ -4,7 +4,12 @@ from datetime import datetime, timedelta
 
 
 def _date_after(days: int) -> str:
-    return (datetime.now() + timedelta(days=days)).strftime("%Y-%m-%d")
+    """返回测试配置中的下一个营业日。"""
+    date = datetime.now() + timedelta(days=days)
+    holidays = {"2026-01-01", "2026-05-01"}
+    while date.weekday() == 0 or date.strftime("%Y-%m-%d") in holidays:
+        date += timedelta(days=1)
+    return date.strftime("%Y-%m-%d")
 
 
 def test_list_services_reads_active_services(test_db, monkeypatch):

@@ -798,6 +798,7 @@
     <div class="brand"><span class="mark">H</span><span>HairCutAgent</span></div>
     <div class="nav-links">
       <a href="http://101.43.56.2:8898">个人作品集</a>
+      <a href="http://101.43.56.2:8898/resume.html">在线简历</a>
       <a href="#features">功能</a>
       <a href="#workflow">流程</a>
       <a href="#architecture">架构</a>
@@ -918,7 +919,7 @@
         <div class="tech-item"><b>Python MCP SDK</b><span>提供 stdio 和 Streamable HTTP 两种接入方式，暴露 3 个只读业务查询工具，不介入预约写操作。</span></div>
         <div class="tech-item"><b>HTML / CSS / JS</b><span>实现项目展示页、用户体验页和轻量后台，并补齐预约结果查询、状态同步与移动端适配。</span></div>
         <div class="tech-item"><b>Nginx / Ubuntu</b><span>部署 Dify、FastAPI 后端和静态页面，形成公网可访问链路。</span></div>
-        <div class="tech-item"><b>GitHub</b><span>公开仓库完成历史清理、运行产物忽略和敏感信息检查。</span></div>
+        <div class="tech-item"><b>GitHub</b><span>当前主分支已隔离私有 DSL、运行数据与线上敏感配置，并保留可审阅的公开工程材料。</span></div>
         <div class="tech-item"><b>Prompt Engineering</b><span>将预约口语表达转成可执行字段，并控制追问顺序和兜底话术。</span></div>
       </div>
     </div>
@@ -988,6 +989,11 @@
             <h3>后台接口与管理鉴权补齐</h3>
             <p>管理接口增加 Bearer Token 鉴权，Token 从服务器私有环境加载，避免管理接口裸露或把敏感配置带入仓库。</p>
           </div>
+          <div class="proof-card">
+            <span class="label">回归测试</span>
+            <h3>48 项测试覆盖核心链路</h3>
+            <p>使用 pytest + TestClient 覆盖公共接口、管理鉴权、预约生命周期、异常状态和只读 MCP 查询。</p>
+          </div>
         </div>
       </div>
     </section>
@@ -1000,6 +1006,7 @@
       </div>
       <div class="cta-row">
         <a class="btn btn-secondary" href="http://101.43.56.2:8898">个人作品集</a>
+        <a class="btn btn-secondary" href="http://101.43.56.2:8898/resume.html">在线简历</a>
         <a class="btn btn-primary" data-demo-link target="_blank" rel="noopener">立即体验 Demo →</a>
         <a class="btn btn-secondary" data-experience-link target="_blank" rel="noopener">原始 Dify 对话页</a>
         <a class="btn btn-secondary" data-admin-link target="_blank" rel="noopener">管理后台</a>
